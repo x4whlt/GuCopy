@@ -106,8 +106,8 @@ const channels = [
         user.token = token;
         user.tokenExpire = Date.now() + 5 * 60 * 1000; // 5 นาที
 
-        playlist += `#EXTINF:-1, ${ch.name}\n`;
-        playlist += `https://gucopy.onrender.com/stream?token=${token}\n\n`;
+playlist += `#EXTINF:-1, ${ch.name}\n`;
+playlist += `https://gucopy.onrender.com/stream?token=${token}&url=${encodeURIComponent(ch.url)}\n\n`;
     });
 
     save();
