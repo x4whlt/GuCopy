@@ -1,7 +1,9 @@
 [
   {
-    "username": "user1",
+    "username": "admin",
+    "password": "1234",
     "expire": "2099-01-01",
-    "banned": false
+    "banned": false,
+    "role": "admin"
   }
 ]
