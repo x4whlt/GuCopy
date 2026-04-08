@@ -1,0 +1,17 @@
+name = "wiseplay-vip-worker"
+main = "src/index.ts"
+compatibility_date = "2026-04-08"
+
+[vars]
+API_BASE_URL = "https://vip.example.com"
+PLAYLIST_BRAND_NAME = "My VIP"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "wiseplay_vip_db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[kv_namespaces]]
+binding = "TOKENS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_NAMESPACE_ID"

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wiseplay VIP Admin</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Wiseplay VIP Admin</h1>
+    <p class="muted">หน้าแอดมินเริ่มต้นสำหรับ Cloudflare Pages</p>
+
+    <section class="card">
+      <h2>1) Login Admin</h2>
+      <div class="grid">
+        <input id="apiBase" placeholder="API Base URL เช่น https://vip.example.com" />
+        <input id="username" placeholder="admin username" value="admin" />
+        <input id="password" placeholder="admin password" type="password" />
+        <button id="loginBtn">Login</button>
+      </div>
+      <pre id="loginResult"></pre>
+    </section>
+
+    <section class="card">
+      <h2>2) สร้างผู้ใช้ VIP</h2>
+      <div class="grid">
+        <input id="newUsername" placeholder="username" />
+        <input id="newPassword" placeholder="password" />
+        <input id="newExpireAt" placeholder="expire_at เช่น 2026-12-31T23:59:59Z" />
+        <input id="newMaxDevices" placeholder="max devices" value="1" />
+        <button id="createUserBtn">Create User</button>
+      </div>
+      <pre id="createUserResult"></pre>
+    </section>
+
+    <section class="card">
+      <h2>3) รายชื่อผู้ใช้</h2>
+      <button id="loadUsersBtn">Load Users</button>
+      <pre id="usersResult"></pre>
+    </section>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
