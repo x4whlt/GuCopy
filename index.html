@@ -85,7 +85,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-slate-700/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 4.0 Ultimate Edition</span>
+                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 4.1 Ultimate Edition</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-yellow-300 to-blue-500 mb-3">
                 SERIES HARVESTER PRO
@@ -284,7 +284,6 @@
             <div class="p-4 bg-slate-950/80 border-t border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                 <div class="w-full overflow-hidden">
                     <p class="text-[11px] font-mono text-slate-500 uppercase">Stream URL Path</p>
-                    <!-- FIX: ลบ truncate ออกเพื่อให้แสดง URL ยาวๆ แบบตัดขึ้นบรรทัดใหม่ได้ (break-all) ทำให้อ่านง่ายขึ้น -->
                     <p id="modalStreamUrl" class="text-xs font-mono text-emerald-400 break-all select-all pr-2"></p>
                 </div>
                 <button onclick="copyStreamUrl()" class="shrink-0 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1.5">
@@ -302,7 +301,7 @@
         let activeHarvest = false;
         let isStopped = false;
         let gatheredSeries = []; 
-        let storageFullFlag = false; // ป้องกันการสแปมแจ้งเตือน LocalStorage เต็ม
+        let storageFullFlag = false; 
         
         // Native Web Audio API Synthesizer
         let audioCtx = null;
@@ -383,7 +382,6 @@
             }, 3500);
         }
 
-        // ป้องกัน XSS & HTML Injection ด้วย Regex ครอบจักรวาล
         function escapeHTML(str) {
             if (!str) return '';
             return str.toString().replace(/[&<>"']/g, function(match) {
@@ -397,7 +395,6 @@
             const time = new Date().toLocaleTimeString();
             const logItem = document.createElement('div');
             logItem.className = colorClass;
-            // ใช้ innerText สำหรับข้อความหลักป้องกัน XSS ยกเว้นส่วนเวลา
             logItem.innerHTML = `<span class="text-slate-500">[${time}]</span> <span class="log-text"></span>`;
             logItem.querySelector('.log-text').innerText = text;
             terminal.appendChild(logItem);
@@ -408,7 +405,6 @@
             document.getElementById('terminal').innerHTML = `<div class="text-slate-500">[SYSTEM] เคลียร์บันทึกการทำงานเรียบร้อย</div>`;
         }
 
-        // ฟังก์ชันอัปเดตแถบความคืบหน้า (Progress Bar)
         function updateProgress(percent, detailText = '') {
             const bar = document.getElementById('progressBar');
             const text = document.getElementById('progressText');
@@ -423,34 +419,94 @@
         function adjustPage(inputId, delta) {
             const input = document.getElementById(inputId);
             let val = parseInt(input.value);
-            if (isNaN(val)) val = 1; // ดักจับกรณีผู้ใช้ลบตัวเลขทิ้งจนเป็นค่าว่าง
+            if (isNaN(val)) val = 1;
             val += delta;
             if (val < 1) val = 1;
             input.value = val;
         }
 
-        // ฟังก์ชันสกัดข้อมูล พากย์ไทย/ซับไทย/Season ออกจากชื่อเรื่อง
+        // ฟังก์ชันตรวจสอบการแบ่ง Season อัตโนมัติ (แก้ปัญหาเว็บไม่ยอมพิมพ์คำว่า Season ให้)
+        function autoFormatEpisodes(episodes) {
+            if (!episodes || episodes.length <= 1) return episodes;
+
+            // เช็คว่าในตอนย่อยมีคำบอก Season อยู่แล้วหรือไม่ ถ้ามีระบบก็จะไม่ยุ่ง
+            const hasExplicitSeason = episodes.some(ep => /(?:SS|Season|ภาค)[\s\.]*\d+/i.test(ep.title));
+            if (hasExplicitSeason) return episodes;
+
+            let ascCount = 0;
+            let descCount = 0;
+            let prevNum = -1;
+
+            // ตรวจสอบทิศทางการเรียงลำดับ ป้องกันเพี้ยนถ้าเว็บเรียงจากตอนล่าสุดไปตอนแรก
+            for (let ep of episodes) {
+                const match = ep.title.match(/\d+/);
+                if (match) {
+                    const num = parseInt(match[0], 10);
+                    if (prevNum !== -1) {
+                        if (num > prevNum) ascCount++;
+                        if (num < prevNum) descCount++;
+                    }
+                    prevNum = num;
+                }
+            }
+
+            if (descCount > ascCount) return episodes; // ข้ามการทำ Auto-Season ถ้าเรียงถอยหลัง
+
+            let needsAutoSeason = false;
+            let lastNum = -1;
+            
+            // สแกนหาการ "รีเซ็ต" ของตัวเลข (เช่น นับถึง 12 แล้วตกกลับมา 1 ใหม่)
+            for (let ep of episodes) {
+                const match = ep.title.match(/\d+/);
+                if (match) {
+                    const num = parseInt(match[0], 10);
+                    if (lastNum > 1 && num < lastNum && (num === 1 || num === 0)) {
+                        needsAutoSeason = true;
+                        break;
+                    }
+                    lastNum = num;
+                }
+            }
+
+            // ถ้าระบบพบการรีเซ็ตตัวเลข จะทำการประทับตรา SS1, SS2 เข้าไปข้างหน้าให้ทันที
+            if (needsAutoSeason) {
+                let currentSeason = 1;
+                lastNum = -1;
+                for (let ep of episodes) {
+                    const match = ep.title.match(/\d+/);
+                    if (match) {
+                        const num = parseInt(match[0], 10);
+                        // ถ้าตกกลับมา 1 แปลว่าขึ้น Season ใหม่
+                        if (lastNum > 1 && num < lastNum && (num === 1 || num === 0)) {
+                            currentSeason++;
+                        }
+                        lastNum = num;
+                    }
+                    // ประทับตรา SS ลงไปในชื่อตอน
+                    ep.title = `SS${currentSeason} ${ep.title}`;
+                }
+            }
+
+            return episodes;
+        }
+
         function extractSeriesInfo(rawTitle) {
             let clean = rawTitle;
             let tags = [];
 
-            // 1. ตรวจสอบพากย์ไทย / ซับไทย
             if (/พากย์ไทย/i.test(clean)) tags.push({ text: 'พากย์ไทย', type: 'dub' });
             if (/ซับไทย|บรรยายไทย/i.test(clean)) tags.push({ text: 'ซับไทย', type: 'sub' });
 
-            // ลบคำว่าพากย์/ซับออกจากชื่อเรื่องหลัก
             clean = clean.replace(/พากย์ไทย\+ซับไทย|พากย์ไทย|ซับไทย|บรรยายไทย/gi, '');
 
-            // 2. ตรวจสอบ Season / SS / ภาค (อัปเดตให้รองรับการใส่จุด เช่น SS.2 หรือ ปี.2)
             const ssMatch = clean.match(/(?:season|ss|ภาค|ปี)[\s\.]*(\d+)/i);
             if (ssMatch) {
                 tags.push({ text: `Season ${ssMatch[1]}`, type: 'season' });
                 clean = clean.replace(/(?:season|ss|ภาค|ปี)[\s\.]*(\d+)/gi, '');
             }
 
-            // 3. ทำความสะอาดเศษวงเล็บหรือขีดที่เหลือทิ้งไว้จากการตัดคำ
             clean = clean.replace(/[\(\)\[\]\-]/g, ' ').replace(/\s+/g, ' ').trim();
-            if (!clean) clean = rawTitle; // กรณีตัดจนหมดให้ใช้ชื่อเดิม
+            if (!clean) clean = rawTitle;
 
             return { cleanTitle: clean, tags: tags, originalTitle: rawTitle };
         }
@@ -473,7 +529,6 @@
             for (let i = 0; i < retries; i++) {
                 if (isStopped) return null;
                 
-                // เพิ่ม AbortController บังคับ Timeout (10 วินาที) ป้องกัน Server ต้นทางค้างจนสคริปต์หยุดเดิน
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
@@ -503,7 +558,7 @@
         function saveToStorage() {
             try {
                 localStorage.setItem('harvesterData', JSON.stringify(gatheredSeries));
-                storageFullFlag = false; // Reset if save is successful
+                storageFullFlag = false; 
             } catch (e) {
                 if (!storageFullFlag) {
                     showToast('พื้นที่จัดเก็บ (LocalStorage) เต็ม! แนะนำให้ล้างแคชหรือ Export ข้อมูล', 'error');
@@ -523,7 +578,6 @@
                 gatheredSeries = [];
                 document.getElementById('output').innerHTML = '';
                 
-                // FIX: ล้างกล่องค้นหาและรีเฟรชการกรอง เพื่อป้องกันการซ่อนข้อมูลใหม่โดยไม่ตั้งใจ
                 document.getElementById('searchInput').value = '';
                 filterResults();
                 
@@ -563,7 +617,6 @@
                     const url = await getStream(btn.id);
                     if (url) {
                         triggerSound('tick');
-                        // เคลียร์การขึ้นบรรทัดใหม่ (Newline) ที่ซ่อนอยู่ในปุ่ม ป้องกันโครงสร้างไฟล์ M3U ระเบิด
                         const cleanEpTitle = btn.textContent.trim().replace(/[\r\n]+/g, " ");
                         return { title: cleanEpTitle, url };
                     }
@@ -579,7 +632,6 @@
 
         async function getStream(postId) {
             const json = await requestWithRetry(`https://kubhd24.net/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`, true);
-            // ดักจับ json?.success และเช็คโครงสร้าง player เพื่อกัน Data undefined
             if (!json?.success || !json.player) return null;
             const match = json.player.match(/data-src="([^"]+)"/);
             if (!match) return null;
@@ -599,20 +651,21 @@
             const epButtons = doc.querySelectorAll("#eplist button.ep");
             appendLog(`พบ ${epButtons.length} ตอน สำหรับเรื่อง "${rawTitle}"`, 'text-blue-300');
             
-            // ดึงความเร็วจากตั้งค่า UI (ค่าตั้งต้นคือ 5)
             const concurrencyLimit = parseInt(document.getElementById('speedSelect').value) || 5;
             let episodes = await processEpisodesConcurrently(epButtons, concurrencyLimit);
             
             if (isStopped) return null;
+
+            // [NEW] ประมวลผลชื่อตอนเพื่อตรวจจับการซ้อนทับของ Season
+            episodes = autoFormatEpisodes(episodes);
             
-            // เรียกใช้ฟังก์ชันสกัดข้อมูลซับ/พากย์
             const { cleanTitle, tags } = extractSeriesInfo(rawTitle);
             
             return { 
                 id, 
-                title: rawTitle, // ชื่อดั้งเดิมสำหรับสร้าง M3U
-                cleanTitle: cleanTitle, // ชื่อสะอาดสำหรับ UI
-                tags: tags, // ป้ายกำกับ
+                title: rawTitle, 
+                cleanTitle: cleanTitle, 
+                tags: tags, 
                 poster, 
                 episodes, 
                 pageNum, 
@@ -622,12 +675,11 @@
 
         async function startHarvesting() {
             if (activeHarvest) return;
-            getAudioContext(); // ป้องกัน Audio Policy Block
+            getAudioContext(); 
             
             const startPage = parseInt(document.getElementById("startPage").value);
             const endPage = parseInt(document.getElementById("endPage").value);
             
-            // ดักบั๊กการตั้งค่าหน้าผิดพลาด (รวมถึงค่าว่าง)
             if (isNaN(startPage) || isNaN(endPage) || startPage < 1 || endPage < 1) {
                 showToast('ข้อผิดพลาด: กรุณาระบุหน้าเริ่มต้นและสิ้นสุดเป็นตัวเลข!', 'error');
                 return;
@@ -648,7 +700,6 @@
             document.getElementById('speedSelect').disabled = true;
             document.getElementById('btnClearCache').disabled = true;
             
-            // FIX 1: ล็อกฟิลด์ Input และปุ่มปรับหน้าเว็บทั้งหมดขณะสแกน ป้องกันผู้ใช้กดเล่น
             document.getElementById('proxyInput').disabled = true;
             document.getElementById('startPage').disabled = true;
             document.getElementById('endPage').disabled = true;
@@ -682,9 +733,8 @@
                     continue;
                 }
 
-                // FIX: ปรับ Regex ให้รองรับทั้ง URL แบบเต็มและแบบย่อ ป้องกันสคริปต์พังเมื่อเว็บปลายทางเปลี่ยนโครงสร้าง HTML
                 const regex = /href="(?:https?:\/\/[^\/]+)?\/series\/([^"\/]+)\//g;
-                const ids = Array.from(new Set([...catHtml.matchAll(regex)].map(m => m[1]))).filter(i => i !== 'series');
+                const ids = Array.from(new Set([...catHtml.matchAll(regex)])).map(m => m[1]).filter(i => i !== 'series');
                 
                 if(ids.length === 0) {
                     updateProgress(((p - startPage + 1) / totalPagesToScan) * 100, `หน้า ${p} ไม่มีข้อมูล`);
@@ -704,7 +754,6 @@
                     
                     loader.textContent = `⏳ หน้าที่ ${p} | เรื่องที่ ${i+1}/${ids.length}`;
                     
-                    // คำนวณและอัปเดตแถบความคืบหน้า (Progress) แบบผสม
                     const baseProgress = ((p - startPage) / totalPagesToScan) * 100;
                     const pageProgress = ((i + 1) / ids.length) * (100 / totalPagesToScan);
                     updateProgress(baseProgress + pageProgress, `ดึงข้อมูล: ${ids[i]}`);
@@ -712,14 +761,13 @@
                     appendLog(`[ดึงข้อมูล]: ${ids[i]}`, 'text-indigo-300');
                     
                     const data = await parseSeries(ids[i], p, categoryText);
-                    if (isStopped) break; // กันเซฟข้อมูลที่แหว่ง
+                    if (isStopped) break; 
                     
                     if (data && data.episodes.length > 0) {
                         const existingIndex = gatheredSeries.findIndex(s => s.id === data.id);
                         
                         if (existingIndex !== -1) {
                             const existingSeries = gatheredSeries[existingIndex];
-                            // เปลี่ยนจาก > เป็น >= เพื่อบังคับอัปเดต URL เสมอ (ป้องกันเว็บต้นทางเปลี่ยนลิงก์หนี)
                             if (data.episodes.length >= existingSeries.episodes.length) {
                                 let isNewEpisodes = data.episodes.length > existingSeries.episodes.length;
                                 gatheredSeries[existingIndex] = data;
@@ -729,20 +777,18 @@
                                 const tempContainer = document.createElement('div');
                                 renderCard(data, p, tempContainer); 
                                 
-                                // ป้องกันการ์ดเด้งไปอยู่ล่างสุดเวลาอัปเดต
                                 if(oldCard && tempContainer.firstChild) {
                                     oldCard.parentNode.replaceChild(tempContainer.firstChild, oldCard);
                                 } else {
                                     renderCard(data, p);
                                 }
                                 
-                                filterResults(); // บังคับอัปเดตการค้นหาอัตโนมัติเผื่อผู้ใช้พิมพ์ค้างไว้
+                                filterResults(); 
 
                                 if (isNewEpisodes) {
                                     showToast(`อัปเดตตอนใหม่ "${data.cleanTitle}" สำเร็จ!`, 'success');
                                     appendLog(`🔄 อัปเดตตอนใหม่: "${data.cleanTitle}" (${existingSeries.episodes.length} -> ${data.episodes.length} ตอน)`, 'text-emerald-400');
                                 } else {
-                                    // หากจำนวนตอนเท่าเดิม จะเป็นการรีเฟรช URL สตรีมมิ่งใหม่แทน
                                     appendLog(`🔄 อัปเดตลิงก์วิดีโอให้สดใหม่: "${data.cleanTitle}"`, 'text-blue-400');
                                 }
                             } else {
@@ -753,10 +799,7 @@
                             renderCard(data, p);
                             saveToStorage(); 
                             
-                            filterResults(); // FIX 2.2: บังคับอัปเดตการค้นหาอัตโนมัติสำหรับเรื่องที่เพิ่งดึงใหม่
-
-                            // ปิดเสียง Success รายเรื่อง ป้องกันเสียงตีกัน
-                            // triggerSound('success');
+                            filterResults(); 
                             showToast(`ดึง "${data.cleanTitle}" สำเร็จ!`, 'success');
                         }
                     }
@@ -804,7 +847,6 @@
             document.getElementById('speedSelect').disabled = false;
             document.getElementById('btnClearCache').disabled = false;
             
-            // FIX 1: ปลดล็อกฟิลด์ Input และปุ่มปรับหน้าเว็บ
             document.getElementById('proxyInput').disabled = false;
             document.getElementById('startPage').disabled = false;
             document.getElementById('endPage').disabled = false;
@@ -827,17 +869,14 @@
         }
 
         function renderCard(data, pageNum, targetContainer = null) {
-            // ป้องกันภาษาไทยเพี้ยนใน M3U แบบรายเรื่อง (Single Export)
             let m3u = "\uFEFF#EXTM3U\n";
             const groupName = data.categoryText || "ซีรีส์ทั่วไป";
             
-            // แปลงอัญประกาศให้ปลอดภัยสำหรับ M3U (Data Corruption Fix)
             const safeTitle = data.title.replace(/"/g, "'");
             const safeGroupName = groupName.replace(/"/g, "'");
             const safePoster = data.poster.replace(/"/g, "'");
 
             data.episodes.forEach(ep => {
-                // ทำความสะอาดอัญประกาศในชื่อตอนย่อยด้วย เพื่ออุดรอยรั่วไฟล์ M3U ให้สมบูรณ์แบบ
                 const safeEpTitle = ep.title.replace(/"/g, "'");
                 m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
             });
@@ -847,12 +886,10 @@
             card.setAttribute('data-title', data.title.toLowerCase());
             card.setAttribute('data-id', data.id); 
             
-            // --- ระบบจัดกลุ่ม Season ใน Dropdown อัตโนมัติ ---
             let groups = {};
             let currentGroupName = "รายการตอนทั้งหมด";
             
             data.episodes.forEach(ep => {
-                // ตรวจจับคำว่า SS, Season, ภาค ในชื่อตอนย่อย
                 const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.]*(\d+)/i);
                 if (ssMatch) {
                     currentGroupName = `Season ${ssMatch[1]}`;
@@ -868,11 +905,9 @@
             const groupNames = Object.keys(groups);
             
             if (groupNames.length > 1 || (groupNames.length === 1 && groupNames[0] !== "รายการตอนทั้งหมด")) {
-                // ถ้าตรวจพบการแบ่ง Season ให้ใช้แท็ก <optgroup> เพื่อจัดหมวดหมู่
                 groupNames.forEach(gName => {
                     optionsHtml += `<optgroup label="📺 ${escapeHTML(gName)}">`;
                     groups[gName].forEach(ep => {
-                        // ตัดคำว่า SS ออกจากชื่อตอนย่อยใน Dropdown เพื่อไม่ให้รกตา
                         let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.]*\d+[\s\-\:]*/i, '').trim();
                         if(!cleanEpTitle) cleanEpTitle = ep.title; 
                         optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(cleanEpTitle)}</option>`;
@@ -880,14 +915,11 @@
                     optionsHtml += `</optgroup>`;
                 });
             } else {
-                // แบบปกติ (กรณีเป็นซีรีส์ SS เดียวธรรมดา)
                 data.episodes.forEach(ep => {
                     optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(ep.title)}</option>`;
                 });
             }
-            // ---------------------------------------------
 
-            // สร้าง HTML สำหรับ ป้ายกำกับ (Tags)
             let tagsHtml = '';
             if (data.tags && data.tags.length > 0) {
                 data.tags.forEach(t => {
@@ -899,7 +931,6 @@
                 });
             }
 
-            // เลือกใช้ชื่อที่ทำความสะอาดแล้วมาแสดงผลหน้าเว็บ
             const displayTitle = data.cleanTitle ? data.cleanTitle : data.title;
             const escapedSafeTitle = escapeHTML(displayTitle);
 
@@ -913,7 +944,6 @@
                     <div>
                         <h4 class="font-bold text-slate-100 text-sm line-clamp-2 min-h-[40px] group-hover:text-amber-400 transition-colors" title="${escapeHTML(data.title)}">${escapedSafeTitle}</h4>
                         
-                        <!-- พื้นที่แสดงป้ายกำกับ พากย์/ซับ/Season -->
                         <div class="flex flex-wrap gap-1.5 mt-1.5 mb-2 min-h-[22px]">
                             ${tagsHtml}
                         </div>
@@ -968,7 +998,6 @@
                 }
             });
 
-            // อัปเดต UI เมื่อค้นหาแล้วไม่พบข้อมูล
             const emptyState = document.getElementById('emptyState');
             if (visibleCount === 0 && cards.length > 0) {
                 emptyState.classList.remove('hidden');
@@ -979,7 +1008,6 @@
                 `;
             } else if (visibleCount > 0) {
                 emptyState.classList.add('hidden');
-                // คืนค่ากลับไปเป็นหน้าจอรอสแกนปกติเผื่อกรณีล้างข้อมูล
                 emptyState.innerHTML = `
                     <i class="fa-solid fa-layer-group text-slate-700 text-6xl mb-4"></i>
                     <h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลที่จะแสดงผล</h3>
@@ -1006,7 +1034,6 @@
         }
 
         function compileMegaM3U() {
-            // ใส่ \uFEFF (UTF-8 BOM) ไว้หน้าสุด บังคับให้ Smart TV/VLC อ่านสระภาษาไทยได้แบบไม่เพี้ยน
             let megaM3U = "\uFEFF#EXTM3U\n";
             gatheredSeries.forEach(series => {
                 const groupName = series.categoryText || "ซีรีส์ทั่วไป";
@@ -1015,7 +1042,6 @@
                 const safePoster = series.poster.replace(/"/g, "'");
                 
                 series.episodes.forEach(ep => {
-                    // ทำความสะอาดอัญประกาศในชื่อตอนย่อยด้วย (สำหรับปุ่มดาวน์โหลดไฟล์รวม)
                     const safeEpTitle = ep.title.replace(/"/g, "'");
                     megaM3U += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
                 });
@@ -1028,7 +1054,6 @@
             const content = compileMegaM3U();
             const category = document.getElementById("categorySelect").value;
             
-            // FIX 3: เปลี่ยน MIME Type ให้เป็นมาตรฐานของ IPTV ป้องกันแอปบน Smart TV อ่านไฟล์ไม่ออก
             const blob = new Blob([content], { type: 'audio/x-mpegurl;charset=utf-8' });
             
             const url = URL.createObjectURL(blob);
@@ -1073,7 +1098,6 @@
             const modal = document.getElementById('playerModal');
             modal.classList.remove('hidden');
             
-            // ล็อกฉากหลังไม่ให้เลื่อนได้ขณะเปิด Modal (UX Fix)
             document.body.style.overflow = 'hidden';
             
             const video = document.getElementById('hlsPlayer');
@@ -1082,7 +1106,6 @@
             video.classList.add('hidden');
             placeholder.classList.remove('hidden');
 
-            // ดักจับกรณี CDN โดนบล็อก ป้องกัน Script Crash (Reference Error Fix)
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 if (activeHls) { activeHls.destroy(); }
                 const hls = new Hls();
@@ -1097,7 +1120,6 @@
                 hls.on(Hls.Events.ERROR, function (event, data) {
                     if (data.fatal) {
                         appendLog(`[PLAYER ERROR]: ไม่สามารถสตรีมวิดีโอได้ (${data.type})`, 'text-rose-500');
-                        // เปลี่ยนจากจอดำ ให้แสดงข้อความ Error ชัดเจน
                         video.classList.add('hidden');
                         placeholder.classList.remove('hidden');
                         placeholder.innerHTML = `
@@ -1109,7 +1131,6 @@
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = url;
-                // แก้บั๊กซ้อนทับ Event โดยใช้ onloadedmetadata เพื่อ Overwrite
                 video.onloadedmetadata = function() {
                     video.classList.remove('hidden');
                     placeholder.classList.add('hidden');
@@ -1127,7 +1148,6 @@
             const modal = document.getElementById('playerModal');
             modal.classList.add('hidden');
             
-            // ปลดล็อกฉากหลังให้กลับมาเลื่อนได้ปกติ (UX Fix)
             document.body.style.overflow = '';
             
             const video = document.getElementById('hlsPlayer');
@@ -1137,7 +1157,6 @@
             video.removeAttribute('src'); 
             video.load(); 
             
-            // รีเซ็ตหน้าตา Placeholder ให้กลับเป็นแบบหมุนโหลดติ้วๆ เผื่อเปิดเรื่องถัดไป
             placeholder.innerHTML = `
                 <i class="fa-solid fa-compact-disc text-blue-500 text-5xl animate-spin mb-3"></i>
                 <p class="text-slate-400 text-sm">กำลังเชื่อมต่อสัญญาณสตรีมสด...</p>
