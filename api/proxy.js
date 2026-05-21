@@ -5,7 +5,14 @@
 
 const ALLOWED_HOSTS = [
   "avmisohd.to",
-  "www.avmisohd.to"
+  "www.avmisohd.to",
+  "moviesdoofree.com",
+  "www.moviesdoofree.com",
+  "surrit.com",
+  "ezycdn.com",
+  "turboviplay.com",
+  "vdohls.com",
+  "hdplayfull.xyz"
 ];
 
 // ปรับได้ตามเว็บต้นทางที่คุณได้รับอนุญาต
