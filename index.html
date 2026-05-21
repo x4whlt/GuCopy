@@ -57,19 +57,24 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        /* --- CONFIG & PROXY --- */
-        const PROXY_BASE = "https://jav-proxy.champza55.workers.dev/proxy";
-        const PROXY_KEY  = "JAV-TH_BY_IDOL-CHAMP_2530";
-        const DEFAULT_M3U = "https://dl.dropbox.com/scl/fi/2wgrahh3b1d8s9ppmilgl/JAV.m3u?rlkey=hg2xo38gsmmez3v4msce2jkyn&st=1zp7k2k6&dl=0";
+const PROXY_BASE = "https://gu-copy.vercel.app/api/proxy";
 
-        const FORCE_PROXY_DOMAINS = ["surrit.com", "ezycdn.com", "turboviplay.com", "vdohls.com", "hdplayfull.xyz"];
+const FORCE_PROXY_DOMAINS = [
+    "surrit.com",
+    "ezycdn.com",
+    "turboviplay.com",
+    "vdohls.com",
+    "hdplayfull.xyz",
+    "avmisohd.to",
+    "moviesdoofree.com"
+];
 
-        const useProxy = (url) => {
-            if (!url) return "";
-            return FORCE_PROXY_DOMAINS.some(d => url.includes(d)) 
-                ? `${PROXY_BASE}?key=${PROXY_KEY}&url=${encodeURIComponent(url)}` 
-                : url;
-        };
+const useProxy = (url) => {
+    if (!url) return "";
+    return FORCE_PROXY_DOMAINS.some(d => url.includes(d))
+        ? `${PROXY_BASE}?url=${encodeURIComponent(url)}`
+        : url;
+};
 
         /* --- COMPONENT: VIDEO JS INSTANCE --- */
         const VideoJSPlayer = ({ src, poster, subtitles }) => {
