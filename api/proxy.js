@@ -16,7 +16,9 @@ const ALLOWED_HOSTS = [
   "vdohls.com",
   "www.vdohls.com",
   "hdplayfull.xyz",
-  "www.hdplayfull.xyz"
+  "www.hdplayfull.xyz",
+  "xasiat.com",
+  "www.xasiat.com"
 ];
 
 const DEFAULT_REFERER = "https://avmisohd.to/";
