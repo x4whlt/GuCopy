@@ -1,510 +1,226 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="referrer" content="no-referrer" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JAV STREAMING PRO</title>
-
-  <!-- React & ReactDOM -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <!-- Video.js -->
-  <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-  <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              bg: '#0a0a0a',
-              card: '#141414',
-              accent: '#e50914',
-              text: '#ffffff',
-              muted: '#a3a3a3',
-              dark: '#000000'
-            }
-          }
-        }
-      }
-    }
-  </script>
-
+  <meta charset="UTF-8">
+  <title>Py Playlist</title>
   <style>
-    body {
-      background-color: #0a0a0a;
-      color: #ffffff;
-      font-family: 'Inter', 'Sarabun', sans-serif;
-    }
-
-    .vjs-theme-modern .vjs-big-play-button,
-    .video-js .vjs-big-play-button {
-      background-color: rgba(229, 9, 20, 0.8);
-      border: none;
-      border-radius: 50%;
-      width: 2.5em;
-      height: 2.5em;
-      line-height: 2.5em;
-    }
-
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: #0a0a0a;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #333;
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #e50914;
-    }
+    body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
+    pre { background: #222; color: #0f0; padding: 10px; overflow-x: auto; }
+    .series { margin-bottom: 30px; }
+    .poster { max-width: 200px; }
+    .controls { margin: 15px 0; }
+    button { margin: 5px; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
+    button.season { background: #888; color: #fff; }
+    button.source { background: #0078d7; color: #fff; }
   </style>
 </head>
-
 <body>
-  <div id="root"></div>
+  <h1>Kub24HD Playlist Parser (HTML/JS Version)</h1>
+  <div class="controls" id="season-controls"></div>
+  <div class="controls" id="source-controls"></div>
+  <div id="output">Loading...</div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useRef, useMemo } = React;
+<script>
+async function fetchViaProxy(url) {
+  const proxyUrl = `/api/proxy-k24hd?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.text();
+}
 
-    /*
-      ใช้ proxy ของ Vercel โปรเจกต์เดียวกัน
-      เช่น:
-      https://gu-copy.vercel.app/api/proxy?url=...
-    */
-    const PROXY_BASE = `${window.location.origin}/api/proxy`;
+async function fetchJsonViaProxy(url) {
+  const proxyUrl = `/api/proxy-k24hd?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) return null;
+  return await res.json();
+}
 
-    const DEFAULT_M3U = "https://dl.dropbox.com/scl/fi/2wgrahh3b1d8s9ppmilgl/JAV.m3u?rlkey=hg2xo38gsmmez3v4msce2jkyn&st=1zp7k2k6&dl=0";
+// ดึง player iframe และปุ่มตัวเล่นหลัก/สำรองจาก API
+async function getPlayer(postId) {
+  const apiUrl = `https://kubhd24.net/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`;
+  const json = await fetchJsonViaProxy(apiUrl);
+  if (!json?.success) return [];
 
-    const FORCE_PROXY_DOMAINS = [
-      "surrit.com",
-      "ezycdn.com",
-      "turboviplay.com",
-      "vdohls.com",
-      "hdplayfull.xyz",
-      "avmisohd.to",
-      "www.avmisohd.to",
-      "moviesdoofree.com",
-      "www.moviesdoofree.com"
-    ];
+  const doc = new DOMParser().parseFromString(json.player, "text/html");
+  const buttons = doc.querySelectorAll("button.source-select-btn");
+  let sources = [];
 
-    const useProxy = (url) => {
-      if (!url) return "";
+  buttons.forEach(btn => {
+    const src = btn.getAttribute("data-src");
+    const label = btn.textContent.trim();
+    if (src) sources.push({ src, label });
+  });
 
-      const shouldProxy = FORCE_PROXY_DOMAINS.some(domain => url.includes(domain));
+  return sources;
+}
 
-      return shouldProxy
-        ? `${PROXY_BASE}?url=${encodeURIComponent(url)}`
-        : url;
-    };
+function convertEmbedToM3U8(embedUrl) {
+  try {
+    const url = new URL(embedUrl);
+    const videoId = url.pathname.split("/").pop();
+    return `https://media.vdohls.com/${videoId}/playlist.m3u8`;
+  } catch {
+    return null;
+  }
+}
 
-    const getVideoType = (url) => {
-      const clean = (url || "").split("?")[0].toLowerCase();
+function generateM3U(seriesData) {
+  let m3u = "#EXTM3U\n";
+  const logo = seriesData.poster?.src || "";
+  const title = seriesData.title || "ซีรี่ย์";
 
-      if (clean.endsWith(".m3u8")) return "application/x-mpegURL";
-      if (clean.endsWith(".mp4")) return "video/mp4";
-      if (clean.endsWith(".webm")) return "video/webm";
-      if (clean.endsWith(".ogg") || clean.endsWith(".ogv")) return "video/ogg";
+  for (const ep of seriesData.episodes) {
+    let epNum = ep.number;
+    let seasonNum = ep.season || 1;
+    for (const link of ep.m3u8List) {
+      if (link) {
+        m3u += `#EXTINF:-1 type="series" group-title="" tvg-logo="${logo}" tvg-season="${seasonNum}" tvg-episode="${epNum}", ${title} S${String(seasonNum).padStart(2,"0")} E${String(epNum).padStart(2,"0")}\n`;
+        m3u += link + "\n";
+      }
+    }
+  }
+  return m3u;
+}
+function generateJSON(seriesData) {
+  return [{
+    id: seriesData.id || "",
+    name: seriesData.title || "",
+    category: "ซีรี่ย์",
+    info: {
+      poster: seriesData.poster?.src || "",
+      plot: seriesData.synopsis || "",
+      year: new Date().getFullYear()
+    },
+    seasons: [
+      {
+        season: seriesData.season || 1,
+        name: `Season ${seriesData.season || 1}`,
+        info: {
+          poster: seriesData.poster?.src || "",
+          plot: seriesData.synopsis || "",
+          year: new Date().getFullYear()
+        },
+        episodes: seriesData.episodes.map(ep => ({
+          episode: ep.number,
+          name: ep.epTitle || `ตอนที่ ${ep.number}`,
+          video: ep.m3u8List[0] || "",
+          referrer: "https://hplay.hdplayfull.xyz/"
+        }))
+      }
+    ]
+  }];
+}
+function generateJHAT(seriesData) {
+  return [{
+    player: "p2p/playlist",
+    id: seriesData.id || "",
+    nameEN: "",
+    nameTH: "",
+    name: seriesData.title || "",
+    category: "ซีรี่ย์",
+    info: {
+      poster: seriesData.poster?.src || "",
+      plot: seriesData.synopsis || "",
+      year: new Date().getFullYear(),
+        sound: "พากย์ไทย"
+      },
+    video: seriesData.id || ""
+  }];
+}
+let currentSeason = 1;
+let currentSourcePref = "main";
 
-      return "application/x-mpegURL";
-    };
+async function main() {
+  const params = new URLSearchParams(window.location.search);
+  const ids = params.get("ids")?.split(",") || ["rebirth-2026"];
+  currentSourcePref = params.get("source") || currentSourcePref;
+  const output = document.getElementById("output");
+  const sourceControls = document.getElementById("source-controls");
+  output.innerHTML = "Loading...";
+  sourceControls.innerHTML = "";
 
-    const VideoJSPlayer = ({ src, poster, subtitles }) => {
-      const videoRef = useRef(null);
-      const playerRef = useRef(null);
+  for (const id of ids) {
+    const seriesUrl = `https://kubhd24.net/series/${id}/`;
+    const html = await fetchViaProxy(seriesUrl);
+    if (!html) {
+      output.innerHTML += `<p>โหลดข้อมูลไม่สำเร็จสำหรับ ${id}</p>`;
+      continue;
+    }
 
-      useEffect(() => {
-        if (!src) return;
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const title = doc.querySelector("h1")?.textContent.trim() || id;
+    const img = doc.querySelector("img.wp-post-image");
+    const poster = img ? { src: img.getAttribute("data-src") || img.src, alt: img.alt } : {};
+    const synopsis = doc.querySelector("p")?.textContent.trim() || "";
 
-        const finalSrc = useProxy(src);
-        const type = getVideoType(src);
+    // ดึง season ทั้งหมด
+    const seasonBtns = doc.querySelectorAll("button.season-btn");
+    const seasonControls = document.getElementById("season-controls");
+    seasonControls.innerHTML = "";
+    seasonBtns.forEach((btn, index) => {
+      const seasonText = btn.textContent.trim();
+      const seasonNum = parseInt(seasonText.replace(/[^0-9]/g, ""), 10) || (index+1);
+      const buttonEl = document.createElement("button");
+      buttonEl.className = "season";
+      buttonEl.textContent = seasonText;
+      buttonEl.onclick = () => { currentSeason = seasonNum; main(); };
+      seasonControls.appendChild(buttonEl);
+    });
 
-        if (!playerRef.current) {
-          const videoElement = videoRef.current;
-          if (!videoElement) return;
+    // ดึง episode IDs เฉพาะ season ที่เลือก
+    const epArea = doc.querySelector(`#eplist div[data-season="${seasonBtns[currentSeason-1]?.getAttribute("season-id")}"]`);
+    const epButtons = epArea ? epArea.querySelectorAll("button.ep") : [];
+    let episodes = [];
+    let epIndex = 1;
+    for (const btn of epButtons) {
+      const postId = btn.id;
+      const epTitle = btn.textContent.trim();
+      const sources = await getPlayer(postId);
 
-          const player = playerRef.current = videojs(videoElement, {
-            autoplay: true,
-            controls: true,
-            fluid: true,
-            responsive: true,
-            preload: "auto",
-            poster: poster || "",
-            sources: [
-              {
-                src: finalSrc,
-                type
-              }
-            ]
-          });
+      // สร้างปุ่ม Source Controls จาก API จริง (ครั้งแรกเท่านั้น)
+      if (epIndex === 1) {
+        sources.forEach(srcObj => {
+          const buttonEl = document.createElement("button");
+          buttonEl.className = "source";
+          buttonEl.textContent = srcObj.label;
+          buttonEl.onclick = () => {
+            currentSourcePref = srcObj.label.includes("สำรอง") ? "backup" : "main";
+            main();
+          };
+          sourceControls.appendChild(buttonEl);
+        });
+      }
 
-          player.ready(() => {
-            player.src({ src: finalSrc, type });
-            player.play().catch(() => {});
-          });
+      // เลือก source ตามค่า query string หรือปุ่มที่เลือก
+      let chosen = sources.find(s => currentSourcePref === "backup" ? s.label.includes("สำรอง") : s.label.includes("หลัก"));
+      const m3u8List = chosen ? [convertEmbedToM3U8(chosen.src)] : [];
+      episodes.push({ epTitle, number: epIndex, season: currentSeason, m3u8List });
+      epIndex++;
+    }
 
-          player.on("error", () => {
-            const err = player.error();
-            console.error("Video.js error:", err);
-            console.error("Video source:", finalSrc);
-          });
+    const seriesData = { id, poster, title, synopsis, season: currentSeason, episodes };
+    const m3u = generateM3U(seriesData);
+    const jhatData = generateJHAT(seriesData);
+    const jsonData = generateJSON(seriesData);
 
-          if (subtitles) {
-            player.addRemoteTextTrack({
-              kind: "subtitles",
-              src: subtitles,
-              srclang: "th",
-              label: "Thai",
-              default: true
-            }, false);
-          }
-        } else {
-          const player = playerRef.current;
-          player.poster(poster || "");
-          player.src({ src: finalSrc, type });
-          player.load();
-          player.play().catch(() => {});
-        }
-      }, [src, poster, subtitles]);
+    output.innerHTML = `
+      <div class="series">
+        <h2>${title}</h2>
+        <img class="poster" src="${poster.src}" alt="${poster.alt}">
+        <p>${synopsis}</p>
+        <h3>Playlist (.m3u)</h3>
+        <pre>${m3u}</pre>
+        <h3>JSON Head</h3>
+        <pre>${JSON.stringify(jhatData, null, 2)}</pre>
+        <h3>JSON Data</h3>
+        <pre>${JSON.stringify(jsonData, null, 2)}</pre>
+      </div>
+    `;
+  }
+}
 
-      useEffect(() => {
-        return () => {
-          if (playerRef.current) {
-            playerRef.current.dispose();
-            playerRef.current = null;
-          }
-        };
-      }, []);
-
-      return (
-        <div data-vjs-player>
-          <video
-            ref={videoRef}
-            className="video-js vjs-big-play-centered vjs-theme-modern"
-            playsInline
-          />
-        </div>
-      );
-    };
-
-    const App = () => {
-      const [view, setView] = useState("home");
-      const [m3uUrl, setM3uUrl] = useState(localStorage.getItem("saved_m3u") || DEFAULT_M3U);
-      const [videos, setVideos] = useState([]);
-      const [loading, setLoading] = useState(true);
-      const [errorText, setErrorText] = useState("");
-      const [searchTerm, setSearchTerm] = useState("");
-      const [selectedGroup, setSelectedGroup] = useState("All");
-      const [currentVideo, setCurrentVideo] = useState(null);
-
-      useEffect(() => {
-        fetchVideos();
-      }, [m3uUrl]);
-
-      const fetchVideos = async () => {
-        setLoading(true);
-        setErrorText("");
-
-        try {
-          const res = await fetch(m3uUrl, {
-            cache: "no-store"
-          });
-
-          if (!res.ok) {
-            throw new Error(`โหลด M3U ไม่สำเร็จ: HTTP ${res.status}`);
-          }
-
-          const text = await res.text();
-          const lines = text.split(/\r?\n/);
-          const result = [];
-          let current = null;
-
-          lines.forEach((rawLine, index) => {
-            const line = rawLine.trim();
-
-            if (!line) return;
-
-            if (line.startsWith("#EXTINF:")) {
-              const name =
-                (line.match(/tvg-name="([^"]*)"/) || [])[1] ||
-                line.split(",").pop() ||
-                `Video ${index}`;
-
-              const logo =
-                (line.match(/tvg-logo="([^"]*)"/) || [])[1] ||
-                "";
-
-              const group =
-                (line.match(/group-title="([^"]*)"/) || [])[1] ||
-                "General";
-
-              current = {
-                id: index,
-                name,
-                logo,
-                group,
-                link: ""
-              };
-            } else if (line.startsWith("http")) {
-              if (current) {
-                current.link = line;
-                result.push(current);
-                current = null;
-              }
-            }
-          });
-
-          setVideos(result);
-        } catch (err) {
-          console.error(err);
-          setErrorText(err.message || "โหลดรายการไม่สำเร็จ");
-          setVideos([]);
-        }
-
-        setLoading(false);
-      };
-
-      const groups = useMemo(() => {
-        return ["All", ...new Set(videos.map(v => v.group))].sort();
-      }, [videos]);
-
-      const filtered = videos.filter(v => {
-        const matchGroup = selectedGroup === "All" || v.group === selectedGroup;
-        const matchSearch = v.name.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchGroup && matchSearch;
-      });
-
-      const resetPlaylist = () => {
-        localStorage.removeItem("saved_m3u");
-        setM3uUrl(DEFAULT_M3U);
-        setView("home");
-      };
-
-      const savePlaylist = () => {
-        localStorage.setItem("saved_m3u", m3uUrl);
-        setView("home");
-        fetchVideos();
-      };
-
-      return (
-        <div className="min-h-screen flex flex-col bg-brand-bg">
-          <nav className="bg-brand-card/90 backdrop-blur-md sticky top-0 z-40 border-b border-white/10 px-4 py-3">
-            <div className="container mx-auto flex items-center justify-between gap-4">
-              <div className="flex items-center gap-8">
-                <h1
-                  className="text-2xl font-black text-brand-accent tracking-tighter cursor-pointer"
-                  onClick={() => setView("home")}
-                >
-                  สตรีม<span className="text-white"> JAV</span>
-                </h1>
-
-                <div className="hidden md:flex gap-6 text-sm font-bold uppercase tracking-widest">
-                  <button
-                    onClick={() => setView("home")}
-                    className={view === "home" ? "text-brand-accent" : "text-gray-400 hover:text-white"}
-                  >
-                    บ้าน
-                  </button>
-
-                  <button
-                    onClick={() => setView("manage")}
-                    className={view === "manage" ? "text-brand-accent" : "text-gray-400 hover:text-white"}
-                  >
-                    การตั้งค่า
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-1 max-w-sm relative">
-                <input
-                  className="w-full bg-white/5 border border-white/10 rounded-full py-2 px-10 text-sm focus:border-brand-accent outline-none"
-                  placeholder="ค้นหาภาพยนตร์..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
-                <i className="fa-solid fa-search absolute left-4 top-2.5 text-gray-500"></i>
-              </div>
-            </div>
-          </nav>
-
-          {view === "home" ? (
-            <div className="container mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8">
-              <aside className="lg:w-64 space-y-2">
-                <p className="text-xs font-black text-gray-500 mb-4 px-2 uppercase">
-                  หมวดหมู่
-                </p>
-
-                {groups.map(g => (
-                  <button
-                    key={g}
-                    onClick={() => setSelectedGroup(g)}
-                    className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${
-                      selectedGroup === g
-                        ? "bg-brand-accent text-white"
-                        : "text-gray-400 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    {g}
-                  </button>
-                ))}
-              </aside>
-
-              <main className="flex-1">
-                {errorText && (
-                  <div className="bg-red-500/10 border border-red-500/30 text-red-200 rounded-xl p-4 mb-6">
-                    <div className="font-bold mb-1">เกิดข้อผิดพลาด</div>
-                    <div className="text-sm">{errorText}</div>
-                  </div>
-                )}
-
-                {loading ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-pulse">
-                    {[...Array(8)].map((_, i) => (
-                      <div key={i} className="aspect-[2/3] bg-white/5 rounded-xl"></div>
-                    ))}
-                  </div>
-                ) : filtered.length === 0 ? (
-                  <div className="text-center text-gray-500 py-20">
-                    <i className="fa-solid fa-folder-open text-5xl mb-4"></i>
-                    <p>ไม่พบรายการ</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    {filtered.map(v => (
-                      <div
-                        key={v.id}
-                        className="group cursor-pointer"
-                        onClick={() => setCurrentVideo(v)}
-                      >
-                        <div className="relative aspect-[2/3] rounded-xl overflow-hidden mb-2 border border-white/5 group-hover:border-brand-accent/50 transition bg-white/5">
-                          {v.logo ? (
-                            <img
-                              src={v.logo}
-                              className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                              loading="lazy"
-                              onError={e => {
-                                e.currentTarget.style.display = "none";
-                              }}
-                            />
-                          ) : null}
-
-                          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
-
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                            <i className="fa-solid fa-play bg-brand-accent w-12 h-12 rounded-full flex items-center justify-center pl-1"></i>
-                          </div>
-
-                          <div className="absolute bottom-2 left-2 right-2 text-xs text-white/80 line-clamp-2">
-                            {v.group}
-                          </div>
-                        </div>
-
-                        <h4 className="text-sm font-bold line-clamp-2">{v.name}</h4>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </main>
-            </div>
-          ) : (
-            <div className="container mx-auto px-4 py-20 max-w-xl text-center">
-              <i className="fa-solid fa-gear text-6xl text-brand-accent mb-6"></i>
-
-              <h2 className="text-3xl font-black mb-2">
-                Playlist Settings
-              </h2>
-
-              <p className="text-gray-500 mb-8">
-                ใส่ลิงก์ไฟล์ M3U ของคุณเพื่อเปลี่ยนรายการหนัง
-              </p>
-
-              <input
-                className="w-full bg-white/5 border border-white/10 rounded-xl p-4 mb-4 focus:border-brand-accent outline-none"
-                value={m3uUrl}
-                onChange={e => setM3uUrl(e.target.value)}
-              />
-
-              <div className="flex gap-4">
-                <button
-                  className="flex-1 bg-brand-accent py-4 rounded-xl font-bold hover:bg-red-700 transition"
-                  onClick={savePlaylist}
-                >
-                  Save Changes
-                </button>
-
-                <button
-                  className="bg-white/10 px-6 py-4 rounded-xl font-bold hover:bg-white/20 transition"
-                  onClick={resetPlaylist}
-                >
-                  Reset
-                </button>
-              </div>
-
-              <div className="mt-6 text-xs text-gray-500 text-left bg-white/5 rounded-xl p-4">
-                Proxy ปัจจุบัน:
-                <br />
-                <code>{PROXY_BASE}</code>
-              </div>
-            </div>
-          )}
-
-          {currentVideo && (
-            <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
-              <div className="w-full max-w-5xl">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-bold truncate pr-8">
-                    {currentVideo.name}
-                  </h3>
-
-                  <button
-                    onClick={() => setCurrentVideo(null)}
-                    className="text-3xl hover:text-brand-accent"
-                  >
-                    &times;
-                  </button>
-                </div>
-
-                <div className="rounded-2xl overflow-hidden bg-black shadow-2xl border border-white/10">
-                  <VideoJSPlayer
-                    src={currentVideo.link}
-                    poster={currentVideo.logo}
-                  />
-                </div>
-
-                <div className="mt-3 text-xs text-gray-500 break-all">
-                  Source: {currentVideo.link}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    };
-
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
-  </script>
+// โหลดครั้งแรก
+main();
+</script>
 </body>
 </html>
