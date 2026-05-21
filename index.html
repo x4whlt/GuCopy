@@ -474,6 +474,13 @@
                 try {
                     const targetUrl = getSafeUrl(url);
                     const res = await fetch(proxyInput + encodeURIComponent(targetUrl));
+                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                    return isJson ? await res.json() : await res.text();
+                } catch (e) {
+                    if (i === retries - 1) {
+                        appendLog(`❌ ล้มเหลวหลังพยายาม ${retries} ครั้ง: ${e.message}`, 'text-rose-500');
+                        return null;
+                    }
                     appendLog(`⚠️ เชื่อมต่อขัดข้อง (${e.message}) ลองใหม่รอบ ${i+2}/${retries}...`, 'text-amber-500');
                     await sleep(2000);
                 }
