@@ -189,7 +189,7 @@
                     </div>
                     <div class="flex justify-between mt-1">
                         <span class="text-[9px] text-slate-500 font-mono" id="progressText">0.0%</span>
-                        <span class="text-[9px] text-slate-500 font-mono" id="progressDetail">รอการทำงาน</span>
+                        <span class="text-[9px] text-slate-500 font-mono truncate max-w-[200px] sm:max-w-[300px] text-right" id="progressDetail">รอการทำงาน</span>
                     </div>
                 </div>
             </div>
@@ -441,11 +441,11 @@
             // ลบคำว่าพากย์/ซับออกจากชื่อเรื่องหลัก
             clean = clean.replace(/พากย์ไทย\+ซับไทย|พากย์ไทย|ซับไทย|บรรยายไทย/gi, '');
 
-            // 2. ตรวจสอบ Season / SS / ภาค
-            const ssMatch = clean.match(/(?:season|ss|ภาค|ปี)\s*(\d+)/i);
+            // 2. ตรวจสอบ Season / SS / ภาค (อัปเดตให้รองรับการใส่จุด เช่น SS.2 หรือ ปี.2)
+            const ssMatch = clean.match(/(?:season|ss|ภาค|ปี)[\s\.]*(\d+)/i);
             if (ssMatch) {
                 tags.push({ text: `Season ${ssMatch[1]}`, type: 'season' });
-                clean = clean.replace(/(?:season|ss|ภาค|ปี)\s*(\d+)/gi, '');
+                clean = clean.replace(/(?:season|ss|ภาค|ปี)[\s\.]*(\d+)/gi, '');
             }
 
             // 3. ทำความสะอาดเศษวงเล็บหรือขีดที่เหลือทิ้งไว้จากการตัดคำ
@@ -472,17 +472,28 @@
 
             for (let i = 0; i < retries; i++) {
                 if (isStopped) return null;
+                
+                // เพิ่ม AbortController บังคับ Timeout (10 วินาที) ป้องกัน Server ต้นทางค้างจนสคริปต์หยุดเดิน
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
                 try {
                     const targetUrl = getSafeUrl(url);
-                    const res = await fetch(proxyInput + encodeURIComponent(targetUrl));
+                    const res = await fetch(proxyInput + encodeURIComponent(targetUrl), { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
                     return isJson ? await res.json() : await res.text();
                 } catch (e) {
+                    clearTimeout(timeoutId);
+                    const isTimeout = e.name === 'AbortError';
+                    const errMsg = isTimeout ? 'Server Timeout (ตอบสนองช้าเกินไป)' : e.message;
+                    
                     if (i === retries - 1) {
-                        appendLog(`❌ ล้มเหลวหลังพยายาม ${retries} ครั้ง: ${e.message}`, 'text-rose-500');
+                        appendLog(`❌ ล้มเหลวหลังพยายาม ${retries} ครั้ง: ${errMsg}`, 'text-rose-500');
                         return null;
                     }
-                    appendLog(`⚠️ เชื่อมต่อขัดข้อง (${e.message}) ลองใหม่รอบ ${i+2}/${retries}...`, 'text-amber-500');
+                    appendLog(`⚠️ เชื่อมต่อขัดข้อง (${errMsg}) ลองใหม่รอบ ${i+2}/${retries}...`, 'text-amber-500');
                     await sleep(2000);
                 }
             }
@@ -552,7 +563,9 @@
                     const url = await getStream(btn.id);
                     if (url) {
                         triggerSound('tick');
-                        return { title: btn.textContent.trim(), url };
+                        // เคลียร์การขึ้นบรรทัดใหม่ (Newline) ที่ซ่อนอยู่ในปุ่ม ป้องกันโครงสร้างไฟล์ M3U ระเบิด
+                        const cleanEpTitle = btn.textContent.trim().replace(/[\r\n]+/g, " ");
+                        return { title: cleanEpTitle, url };
                     }
                     return null;
                 });
@@ -706,7 +719,9 @@
                         
                         if (existingIndex !== -1) {
                             const existingSeries = gatheredSeries[existingIndex];
-                            if (data.episodes.length > existingSeries.episodes.length) {
+                            // เปลี่ยนจาก > เป็น >= เพื่อบังคับอัปเดต URL เสมอ (ป้องกันเว็บต้นทางเปลี่ยนลิงก์หนี)
+                            if (data.episodes.length >= existingSeries.episodes.length) {
+                                let isNewEpisodes = data.episodes.length > existingSeries.episodes.length;
                                 gatheredSeries[existingIndex] = data;
                                 saveToStorage();
                                 
@@ -721,12 +736,15 @@
                                     renderCard(data, p);
                                 }
                                 
-                                filterResults(); // FIX 2.1: บังคับอัปเดตการค้นหาอัตโนมัติเผื่อผู้ใช้พิมพ์ค้างไว้
+                                filterResults(); // บังคับอัปเดตการค้นหาอัตโนมัติเผื่อผู้ใช้พิมพ์ค้างไว้
 
-                                // ปิดเสียง Success รายเรื่อง ป้องกันเสียงตีกันจนน่ารำคาญเมื่อดึงข้อมูลได้เร็ว
-                                // triggerSound('success'); 
-                                showToast(`อัปเดตตอนใหม่ "${data.cleanTitle}" สำเร็จ!`, 'success');
-                                appendLog(`🔄 อัปเดตตอนใหม่: "${data.cleanTitle}" (${existingSeries.episodes.length} -> ${data.episodes.length} ตอน)`, 'text-emerald-400');
+                                if (isNewEpisodes) {
+                                    showToast(`อัปเดตตอนใหม่ "${data.cleanTitle}" สำเร็จ!`, 'success');
+                                    appendLog(`🔄 อัปเดตตอนใหม่: "${data.cleanTitle}" (${existingSeries.episodes.length} -> ${data.episodes.length} ตอน)`, 'text-emerald-400');
+                                } else {
+                                    // หากจำนวนตอนเท่าเดิม จะเป็นการรีเฟรช URL สตรีมมิ่งใหม่แทน
+                                    appendLog(`🔄 อัปเดตลิงก์วิดีโอให้สดใหม่: "${data.cleanTitle}"`, 'text-blue-400');
+                                }
                             } else {
                                 appendLog(`⏭️ "${data.cleanTitle}" มีข้อมูลล่าสุดอยู่แล้ว (ข้าม)`, 'text-slate-500');
                             }
@@ -809,17 +827,19 @@
         }
 
         function renderCard(data, pageNum, targetContainer = null) {
-            let m3u = "#EXTM3U\n";
+            // ป้องกันภาษาไทยเพี้ยนใน M3U แบบรายเรื่อง (Single Export)
+            let m3u = "\uFEFF#EXTM3U\n";
             const groupName = data.categoryText || "ซีรีส์ทั่วไป";
             
             // แปลงอัญประกาศให้ปลอดภัยสำหรับ M3U (Data Corruption Fix)
             const safeTitle = data.title.replace(/"/g, "'");
             const safeGroupName = groupName.replace(/"/g, "'");
+            const safePoster = data.poster.replace(/"/g, "'");
 
             data.episodes.forEach(ep => {
-                // FIX: ทำความสะอาดอัญประกาศในชื่อตอนย่อยด้วย เพื่ออุดรอยรั่วไฟล์ M3U ให้สมบูรณ์แบบ
+                // ทำความสะอาดอัญประกาศในชื่อตอนย่อยด้วย เพื่ออุดรอยรั่วไฟล์ M3U ให้สมบูรณ์แบบ
                 const safeEpTitle = ep.title.replace(/"/g, "'");
-                m3u += `#EXTINF:-1 tvg-logo="${data.poster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
+                m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
             });
 
             const card = document.createElement("div");
@@ -827,10 +847,45 @@
             card.setAttribute('data-title', data.title.toLowerCase());
             card.setAttribute('data-id', data.id); 
             
-            let optionsHtml = '';
+            // --- ระบบจัดกลุ่ม Season ใน Dropdown อัตโนมัติ ---
+            let groups = {};
+            let currentGroupName = "รายการตอนทั้งหมด";
+            
             data.episodes.forEach(ep => {
-                optionsHtml += `<option value="${ep.url}">${escapeHTML(ep.title)}</option>`;
+                // ตรวจจับคำว่า SS, Season, ภาค ในชื่อตอนย่อย
+                const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.]*(\d+)/i);
+                if (ssMatch) {
+                    currentGroupName = `Season ${ssMatch[1]}`;
+                }
+                
+                if (!groups[currentGroupName]) {
+                    groups[currentGroupName] = [];
+                }
+                groups[currentGroupName].push(ep);
             });
+
+            let optionsHtml = '';
+            const groupNames = Object.keys(groups);
+            
+            if (groupNames.length > 1 || (groupNames.length === 1 && groupNames[0] !== "รายการตอนทั้งหมด")) {
+                // ถ้าตรวจพบการแบ่ง Season ให้ใช้แท็ก <optgroup> เพื่อจัดหมวดหมู่
+                groupNames.forEach(gName => {
+                    optionsHtml += `<optgroup label="📺 ${escapeHTML(gName)}">`;
+                    groups[gName].forEach(ep => {
+                        // ตัดคำว่า SS ออกจากชื่อตอนย่อยใน Dropdown เพื่อไม่ให้รกตา
+                        let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.]*\d+[\s\-\:]*/i, '').trim();
+                        if(!cleanEpTitle) cleanEpTitle = ep.title; 
+                        optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(cleanEpTitle)}</option>`;
+                    });
+                    optionsHtml += `</optgroup>`;
+                });
+            } else {
+                // แบบปกติ (กรณีเป็นซีรีส์ SS เดียวธรรมดา)
+                data.episodes.forEach(ep => {
+                    optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(ep.title)}</option>`;
+                });
+            }
+            // ---------------------------------------------
 
             // สร้าง HTML สำหรับ ป้ายกำกับ (Tags)
             let tagsHtml = '';
@@ -840,7 +895,7 @@
                     if (t.type === 'dub') color = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
                     if (t.type === 'sub') color = 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
                     if (t.type === 'season') color = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
-                    tagsHtml += `<span class="${color} text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider backdrop-blur-sm shadow-sm">${t.text}</span>`;
+                    tagsHtml += `<span class="${color} text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider backdrop-blur-sm shadow-sm">${escapeHTML(t.text)}</span>`;
                 });
             }
 
@@ -850,7 +905,7 @@
 
             card.innerHTML = `
                 <div class="relative overflow-hidden aspect-[16/10] bg-slate-900">
-                    <img src="${data.poster}" alt="${escapedSafeTitle}" onerror="this.onerror=null; this.src='https://placehold.co/600x400/1e293b/fbbf24?text=No+Cover'" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                    <img src="${escapeHTML(data.poster)}" alt="${escapedSafeTitle}" onerror="this.onerror=null; this.src='https://placehold.co/600x400/1e293b/fbbf24?text=No+Cover'" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
                     <span class="absolute top-3 left-3 bg-blue-500/90 text-slate-100 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-md backdrop-blur-sm">หน้า ${pageNum}</span>
                     <span class="absolute bottom-3 right-3 bg-black/80 text-amber-400 text-xs font-bold px-2 py-1 rounded-md shadow-md backdrop-blur-sm"><i class="fa-solid fa-layer-group text-[10px]"></i> ${data.episodes.length} ตอน</span>
                 </div>
@@ -951,16 +1006,18 @@
         }
 
         function compileMegaM3U() {
-            let megaM3U = "#EXTM3U\n";
+            // ใส่ \uFEFF (UTF-8 BOM) ไว้หน้าสุด บังคับให้ Smart TV/VLC อ่านสระภาษาไทยได้แบบไม่เพี้ยน
+            let megaM3U = "\uFEFF#EXTM3U\n";
             gatheredSeries.forEach(series => {
                 const groupName = series.categoryText || "ซีรีส์ทั่วไป";
                 const safeTitle = series.title.replace(/"/g, "'");
                 const safeGroupName = groupName.replace(/"/g, "'");
+                const safePoster = series.poster.replace(/"/g, "'");
                 
                 series.episodes.forEach(ep => {
-                    // FIX: ทำความสะอาดอัญประกาศในชื่อตอนย่อยด้วย (สำหรับปุ่มดาวน์โหลดไฟล์รวม)
+                    // ทำความสะอาดอัญประกาศในชื่อตอนย่อยด้วย (สำหรับปุ่มดาวน์โหลดไฟล์รวม)
                     const safeEpTitle = ep.title.replace(/"/g, "'");
-                    megaM3U += `#EXTINF:-1 tvg-logo="${series.poster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
+                    megaM3U += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
                 });
             });
             return megaM3U;
@@ -1016,13 +1073,17 @@
             const modal = document.getElementById('playerModal');
             modal.classList.remove('hidden');
             
+            // ล็อกฉากหลังไม่ให้เลื่อนได้ขณะเปิด Modal (UX Fix)
+            document.body.style.overflow = 'hidden';
+            
             const video = document.getElementById('hlsPlayer');
             const placeholder = document.getElementById('videoPlaceholder');
             
             video.classList.add('hidden');
             placeholder.classList.remove('hidden');
 
-            if (Hls.isSupported()) {
+            // ดักจับกรณี CDN โดนบล็อก ป้องกัน Script Crash (Reference Error Fix)
+            if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                 if (activeHls) { activeHls.destroy(); }
                 const hls = new Hls();
                 activeHls = hls;
@@ -1065,6 +1126,10 @@
         function closePlayer() {
             const modal = document.getElementById('playerModal');
             modal.classList.add('hidden');
+            
+            // ปลดล็อกฉากหลังให้กลับมาเลื่อนได้ปกติ (UX Fix)
+            document.body.style.overflow = '';
+            
             const video = document.getElementById('hlsPlayer');
             const placeholder = document.getElementById('videoPlaceholder');
             
