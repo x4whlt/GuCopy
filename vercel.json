@@ -19,7 +19,7 @@
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Range"
+          "value": "Content-Type, Range, Origin, Accept"
         }
       ]
     }
