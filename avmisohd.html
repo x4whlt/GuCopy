@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AV Miso Harvester Pro v1.7 | Ultimate M3U8 Extractor</title>
+    <title>AV Miso Harvester Pro v1.8 | Ultimate M3U8 Extractor</title>
     
     <!-- Favicon Fix -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍑</text></svg>">
@@ -80,13 +80,13 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-rose-900/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.7 (API & XHR Bypass)</span>
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.8 (Heuristic Force Mode)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-500 to-purple-600 mb-3">
                 AV MISO HARVESTER PRO
             </h1>
             <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto font-light leading-relaxed">
-                ระบบดึงข้อมูลวิดีโอ <span class="text-rose-400 font-medium">AVMISOHD</span> อัตโนมัติ พร้อมเจาะทะลุ API หลังบ้าน (vdohls.com / javzero)
+                ระบบดึงข้อมูลวิดีโอ <span class="text-rose-400 font-medium">AVMISOHD</span> อัตโนมัติ พร้อมระบบเดาโครงสร้างลิงก์ (VdoHLS / Javzero)
                 <br class="hidden sm:block">รองรับ Proxy ทะลุบล็อคและระบบจัดการคลังเก็บข้อมูลส่วนตัว
             </p>
         </header>
@@ -288,7 +288,7 @@
                 </div>
                 <div id="terminal" class="w-full bg-[#0B080D] rounded-xl p-3 font-mono text-[11px] leading-relaxed overflow-y-auto h-[250px] lg:h-[400px] text-slate-300 border border-slate-800/50">
                     <div class="text-rose-400">[SYSTEM]: พร้อมทำงานกับ avmisohd.to ...</div>
-                    <div class="text-amber-400/80">[INFO]: โหมดเจาะ API (XHR Interceptor) พร้อมลุย vdohls.com แล้ว</div>
+                    <div class="text-emerald-400/80">[INFO]: โหมดเจาะ Heuristic (เดาโครงสร้าง VdoHLS) ทำงานแล้ว</div>
                 </div>
             </div>
         </div>
@@ -630,52 +630,47 @@
         }
 
         function unpackJS(code) {
-            try {
-                let argsStr = code.match(/}\s*\((.*?)\)\s*\)$/);
-                if(!argsStr) return code;
-                let args = argsStr[1];
-                
-                let strings = [];
-                let strRegex = /['"]([^'"]*)['"]/g;
-                let sm;
-                while ((sm = strRegex.exec(args)) !== null) strings.push(sm[1]);
-                
-                let numbers = [];
-                let numRegex = /,\s*(\d+)\s*/g;
-                let nm;
-                while ((nm = numRegex.exec(args)) !== null) numbers.push(parseInt(nm[1]));
-                
-                if(strings.length >= 2 && numbers.length >= 2) {
-                    let p = strings[0];
-                    let a = numbers[0];
-                    let c = numbers[1];
-                    let k = strings[1].split('|');
-                    
+            let unpacked = code;
+            // Robust unpacker loop to handle multi-packed JS
+            for (let i = 0; i < 3; i++) {
+                let payload = unpacked.match(/return\s+p\s*\}?\s*\(\s*(['"])([\s\S]*?)\1\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(['"])([\s\S]*?)\5\.split\(['"]\|['"]\)/);
+                if (payload) {
+                    let p = payload[2];
+                    let a = parseInt(payload[3]);
+                    let c = parseInt(payload[4]);
+                    let k = payload[6].split('|');
                     let e = function(c) {
                         return (c < a ? '' : e(parseInt(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36));
                     };
-                    
                     while(c--) {
                         if(k[c]) {
                             p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]);
                         }
                     }
-                    return p;
+                    unpacked = p;
+                } else {
+                    // Fallback to basic string parsing if regex didn't perfectly match structure
+                    let argsStr = unpacked.match(/}\s*\((.*?)\)\s*\)$/);
+                    if(argsStr) {
+                        let strings = [], strRegex = /['"]([^'"]*)['"]/g, sm;
+                        while ((sm = strRegex.exec(argsStr[1])) !== null) strings.push(sm[1]);
+                        let numbers = [], numRegex = /,\s*(\d+)\s*/g, nm;
+                        while ((nm = numRegex.exec(argsStr[1])) !== null) numbers.push(parseInt(nm[1]));
+                        if(strings.length >= 2 && numbers.length >= 2) {
+                            let p = strings[0], a = numbers[0], c = numbers[1], k = strings[1].split('|');
+                            let e = function(c) { return (c < a ? '' : e(parseInt(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36)); };
+                            while(c--) { if(k[c]) p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]); }
+                            unpacked = p;
+                        } else break;
+                    } else break;
                 }
-            } catch(e) {}
-            return code;
+            }
+            return unpacked;
         }
 
-        // --- ENHANCED URL EXTRACTOR (NOW EXPLICITLY LOOKS FOR vdohls.com) ---
+        // --- ENHANCED URL EXTRACTOR (NOW INCLUDES HEURISTIC BUILDER) ---
         function extractUrlsFromText(html) {
             let urls = [];
-            
-            const cleanUrl = (u) => {
-                let cleaned = u.replace(/\\\//g, '/').replace(/\\"/g, '').replace(/\\'/g, ''); 
-                if (cleaned.startsWith('//')) cleaned = 'https:' + cleaned;
-                return cleaned.trim();
-            };
-
             let unescapedHtml = html;
             try {
                 unescapedHtml = html.replace(/\\x([0-9A-Fa-f]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16)))
@@ -683,16 +678,19 @@
                 unescapedHtml = decodeHTMLEntities(unescapedHtml);
             } catch(e) {}
 
+            const cleanUrl = (u) => {
+                let cleaned = u.replace(/\\\//g, '/').replace(/\\"/g, '').replace(/\\'/g, ''); 
+                if (cleaned.startsWith('//')) cleaned = 'https:' + cleaned;
+                return cleaned.trim();
+            };
+
             const searchPatterns = (text) => {
-                // 1. Aggressive known domain bypass (vdohls.com, javzero.xyz) anywhere in text
                 let specificDomain = text.match(/(https?:\/\/(?:[a-zA-Z0-9.-]+)?(?:vdohls\.com|javzero\.xyz)[^"'\s<>]*?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
                 if (specificDomain) urls.push(...specificDomain.map(cleanUrl));
                 
-                // 1.5 Very aggressive: Catch vdohls.com even if m3u8 isn't visibly trailing
                 let rawVdohls = text.match(/(https?:\/\/(?:[a-zA-Z0-9.-]+)?vdohls\.com[^"'\s<>\[\]{}]*)/gi);
                 if (rawVdohls) urls.push(...rawVdohls.map(cleanUrl));
 
-                // 2. Generic Quote-Bound Pattern
                 let quoteMatch = text.match(/(["'])(https?:\/\/[a-zA-Z0-9.\-_~:/?#\[\]@!$&'()*+,;=]+?\.(?:m3u8|mp4)[^"']*)\1/gi);
                 if (quoteMatch) {
                     quoteMatch.forEach(m => {
@@ -701,7 +699,6 @@
                     });
                 }
 
-                // 3. JSON / Object notation
                 let jsonMatch = text.match(/(?:sources|file|src|url)["'\s]*[:=]\s*\[?\s*\{?[^}]*?(?:file|src|url)?["'\s]*[:=]["'\s]*(https?:\/\/[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
                 if (jsonMatch) {
                      jsonMatch.forEach(m => {
@@ -710,18 +707,14 @@
                      });
                 }
 
-                // 4. Blunt Force / Protocol relative / URL Encoded
                 let bluntM3u8 = text.match(/(https?:\/\/[a-zA-Z0-9.\-_~:/?#\[\]@!$&'()*+,;=]+?\.m3u8[a-zA-Z0-9.\-_~:/?#\[\]@!$&'()*+,;=]*)/gi);
                 if (bluntM3u8) urls.push(...bluntM3u8.map(cleanUrl));
-                
-                let relMatch = text.match(/((?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
-                if (relMatch) urls.push(...relMatch.map(cleanUrl));
             };
 
             searchPatterns(html);
             if (html !== unescapedHtml) searchPatterns(unescapedHtml);
 
-            // 5. Base64 Decoder
+            // Base64 Decoder
             let b64Matches = unescapedHtml.match(/[a-zA-Z0-9+\/=?_-]{20,}/g);
             if (b64Matches) {
                 b64Matches.forEach(b64 => {
@@ -736,25 +729,32 @@
                 });
             }
             
-            // 6. Unpack packed JS
-            let packedMatches = unescapedHtml.match(/eval\s*\(\s*function\s*\(p,a,c,k,e,d\).*?\)\s*\)/g);
+            // Unpack packed JS and search
+            let packedMatches = unescapedHtml.match(/eval\s*\(\s*function[\s\S]*?\)\s*\)/g);
             if (packedMatches) {
                 packedMatches.forEach(packed => {
                     let unpacked = unpackJS(packed);
                     searchPatterns(unpacked); 
-                    
-                    let b64 = unpacked.match(/[a-zA-Z0-9+\/=?_-]{20,}/g);
-                    if (b64) {
-                        b64.forEach(b => {
-                            try {
-                                let padded = b.replace(/-/g, '+').replace(/_/g, '/');
-                                while (padded.length % 4 !== 0) padded += '=';
-                                let decoded = atob(padded);
-                                if ((decoded.includes('.m3u8') || decoded.includes('.mp4') || decoded.includes('vdohls.com')) && decoded.startsWith('http')) {
-                                    urls.push(decoded);
-                                }
-                            } catch(e) {}
-                        });
+                });
+            }
+
+            // --- HEURISTIC DICTIONARY BRUTE-FORCER ---
+            // If it's a Vdohls/Javzero script, we extract the split dictionary directly to find the ID
+            let fullDicts = unescapedHtml.match(/(['"])([\w\d|_-]*?)\1\.split\(['"]\|['"]\)/g);
+            if (fullDicts) {
+                fullDicts.forEach(dict => {
+                    let match = dict.match(/(['"])([\w\d|_-]*?)\1/);
+                    if (match && match[2]) {
+                        let words = match[2].split('|');
+                        let isTarget = words.includes('vdohls') || words.includes('video') || words.includes('m3u8');
+                        if (isTarget || unescapedHtml.includes('vdohls')) {
+                            // Target ID looks like alphanumeric with _ and -, length ~10-15 (e.g. 0tT-DlsMG_4Ad)
+                            let candidates = words.filter(w => w.length >= 10 && w.length <= 15 && /^[a-zA-Z0-9_-]+$/.test(w) && !/^(https|vdohls|media|video|sources|length|m3u8|mp4|cdn|www)$/i.test(w));
+                            candidates.forEach(id => {
+                                urls.push(`https://media.vdohls.com/${id}/video.m3u8`);
+                                urls.push(`https://cdn3.vdohls.com/${id}/video.m3u8`);
+                            });
+                        }
                     }
                 });
             }
@@ -766,14 +766,13 @@
             if (currentDepth > maxDepth || visited.has(url)) return { urls: [], type: 'max_depth' };
             visited.add(url);
             
-            // --- NEW: API / AJAX BYPASS FOR JAVZERO / VDOHLS ---
-            // Simulate the internal POST request that the video player makes
             let embedIdMatch = url.match(/\/(?:embed|e|v)\/([a-zA-Z0-9_-]+)/i);
+            let embedId = embedIdMatch ? embedIdMatch[1] : null;
+
+            // --- API / AJAX BYPASS ---
             if (embedIdMatch) {
-                let videoId = embedIdMatch[1];
                 let origin = new URL(url).origin;
-                // Typical API endpoint for these scripts
-                let apiUrl = origin + '/api/source/' + videoId; 
+                let apiUrl = origin + '/api/source/' + embedId; 
                 
                 const proxyInput = document.getElementById('proxyInput').value.trim();
                 const fetchApiUrl = proxyInput ? (proxyInput + encodeURIComponent(apiUrl)) : apiUrl;
@@ -788,10 +787,8 @@
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                             'Accept': 'application/json, text/javascript, */*; q=0.01',
-                            // Some basic anti-bot bypass
                             'X-Requested-With': 'XMLHttpRequest'
                         },
-                        // Post body typical for Javzero / Filemoon player scripts
                         body: 'r=&d=' + new URL(url).hostname,
                         signal: apiController.signal
                     });
@@ -801,25 +798,38 @@
                     
                     if (apiRes.ok) {
                         let apiJson = await apiRes.text();
-                        // Parse JSON or extract raw text looking for media urls
                         let extractedApi = extractUrlsFromText(apiJson);
                         let validVideos = extractedApi.filter(u => u.includes('.m3u8') || u.includes('.mp4') || u.includes('vdohls.com'));
                         if (validVideos.length > 0) {
-                            appendLog(`[INFO] 🔓 เจาะทะลุ API หลังบ้านสำเร็จ! (${origin})`, 'text-cyan-400 font-semibold text-[10px]');
+                            appendLog(`[INFO] 🔓 เจาะทะลุ API สำเร็จ! (${origin})`, 'text-cyan-400 font-semibold text-[10px]');
                             return { urls: validVideos, type: 'video' };
                         }
                     }
-                } catch(e) {
-                    // Fail silently and proceed to regular HTML scraping
-                }
+                } catch(e) {}
             }
-            // -----------------------------------------------------
 
+            // HTML Fetch Fallback
             const html = await requestWithRetry(url, 2, true); 
-            if (!html || html === "404") return { urls: [], type: 'failed' };
+            if (!html || html === "404") {
+                // If HTML fails, but we have an embed ID, blindly guess the media.vdohls.com structure!
+                if (embedId && embedId.length >= 10) {
+                    appendLog(`[INFO] 🔓 เจาะทะลุด้วย Heuristic Engine (VdoHLS Build)`, 'text-fuchsia-400 font-semibold text-[10px]');
+                    return { urls: [`https://media.vdohls.com/${embedId}/video.m3u8`], type: 'video' };
+                }
+                return { urls: [], type: 'failed' };
+            }
 
             let extracted = extractUrlsFromText(html);
             let m3u8s = extracted.filter(u => u.includes('.m3u8') || u.includes('.mp4') || u.includes('vdohls.com'));
+            
+            // --- HEURISTIC EMBED ID BUILDER ---
+            // If the HTML was successfully parsed but NO m3u8 was found, we force build it using the ID!
+            if (m3u8s.length === 0 && embedId && embedId.length >= 10 && (html.includes('javzero') || html.includes('vdohls'))) {
+                m3u8s.push(`https://media.vdohls.com/${embedId}/video.m3u8`);
+                m3u8s.push(`https://cdn3.vdohls.com/${embedId}/video.m3u8`);
+                appendLog(`[INFO] 🔓 เจาะทะลุด้วย Heuristic Engine (Force Build ID)`, 'text-fuchsia-400 font-semibold text-[10px]');
+            }
+
             if (m3u8s.length > 0) {
                 return { urls: m3u8s, type: 'video' };
             }
@@ -1057,7 +1067,6 @@
                                         gatheredSeries.push(data);
                                     }
                                     
-                                    // Check if we got an m3u8 or vdohls
                                     let hasM3u8 = data.episodes.some(ep => ep.url.includes('.m3u8') || ep.url.includes('vdohls.com'));
                                     if(hasM3u8) {
                                         appendLog(`🟢 ทะลวงสำเร็จ! (M3U8): ${data.title.substring(0, 25)}...`, 'text-emerald-400');
@@ -1113,7 +1122,17 @@
             let optionsHtml = '';
             let hasM3u8File = false;
 
+            // Remove duplicates just in case heuristic added multiple subdomains of the same file
+            let uniqueEpisodes = [];
+            let seenUrls = new Set();
             data.episodes.forEach(ep => {
+                if(!seenUrls.has(ep.url)) {
+                    seenUrls.add(ep.url);
+                    uniqueEpisodes.push(ep);
+                }
+            });
+
+            uniqueEpisodes.forEach(ep => {
                 if (!ep.isDead) {
                     const safeEp = (ep.title || 'Main').replace(/["',]/g, '').trim();
                     m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroup}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEp}\n${ep.url.trim()}\n`;
@@ -1205,8 +1224,13 @@
                 const group = (s.categoryText || "AV").replace(/["']/g, '');
                 const title = (s.title || 'Video').replace(/["',]/g, '').trim();
                 const poster = (s.poster || '').replace(/["']/g, '');
+                
+                let seenUrls = new Set();
                 s.episodes.forEach(ep => {
-                    if(!ep.isDead) mega += `#EXTINF:-1 tvg-logo="${poster}" group-title="${group}" tvg-name="${title}", ${title}\n${ep.url.trim()}\n`;
+                    if(!ep.isDead && !seenUrls.has(ep.url)) {
+                        seenUrls.add(ep.url);
+                        mega += `#EXTINF:-1 tvg-logo="${poster}" group-title="${group}" tvg-name="${title}", ${title}\n${ep.url.trim()}\n`;
+                    }
                 });
             });
             return mega;
