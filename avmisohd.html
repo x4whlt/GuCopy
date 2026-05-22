@@ -43,7 +43,7 @@
         }
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #0F0B11; }
+        ::-webkit-scrollbar-track { background: #0B080D; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #E11D48; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #BE123C; }
         
@@ -80,7 +80,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-rose-900/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.2.0 (DOM Parser)</span>
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.3.0 (Mega Categories)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-500 to-purple-600 mb-3">
                 AV MISO HARVESTER PRO
@@ -94,55 +94,118 @@
         <!-- Controls & Dashboard Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             <!-- Left Side Controls Panel -->
-            <div class="lg:col-span-2 glassmorphism rounded-2xl p-6 glow-pink relative overflow-hidden">
-                <div class="flex items-center gap-3 mb-5 border-b border-rose-900/50 pb-3">
+            <div class="lg:col-span-2 glassmorphism rounded-2xl p-6 glow-pink relative overflow-hidden flex flex-col">
+                <div class="flex items-center gap-3 mb-5 border-b border-rose-900/50 pb-3 shrink-0">
                     <i class="fa-solid fa-sliders text-rose-500 text-xl"></i>
                     <h2 class="text-lg font-bold">แผงควบคุมการสแกนวิดีโอ</h2>
                 </div>
 
-                <div class="mb-5">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">หมวดหมู่เป้าหมาย (เลือกเพื่อจัดคิว)</label>
-                    <div id="categoryCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div class="mb-5 shrink-0">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">หมวดหมู่เป้าหมาย (เลือกได้หลายหมวด)</label>
+                    <div id="categoryCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[160px] overflow-y-auto pr-2 pb-1 border border-slate-800 rounded-xl p-2 bg-[#0B080D]/50 shadow-inner">
+                        <!-- Main Categories -->
                         <label class="cursor-pointer relative">
                             <input type="checkbox" name="category" value="sexjapan" data-text="หนังโป๊ญี่ปุ่น" checked class="cat-checkbox sr-only">
-                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
                                 หนังโป๊ญี่ปุ่น <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
                             </div>
                         </label>
                         <label class="cursor-pointer relative">
                             <input type="checkbox" name="category" value="av-subthai" data-text="หนังavซับไทย" class="cat-checkbox sr-only">
-                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
                                 หนังavซับไทย <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
                             </div>
                         </label>
                         <label class="cursor-pointer relative">
                             <input type="checkbox" name="category" value="av-china" data-text="หนังโป๊จีน" class="cat-checkbox sr-only">
-                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
                                 หนังโป๊จีน <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
                             </div>
                         </label>
                         <label class="cursor-pointer relative">
                             <input type="checkbox" name="category" value="xxxporn" data-text="หนังโป๊ฝรั่ง" class="cat-checkbox sr-only">
-                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
                                 หนังโป๊ฝรั่ง <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
                             </div>
                         </label>
                         <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="xxxhd" data-text="คลิปโป๊หลุด" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                คลิปโป๊หลุด <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        
+                        <!-- Sub Categories -->
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-rape" data-text="หนังavข่มขืน" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavข่มขืน <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
                             <input type="checkbox" name="category" value="av-student" data-text="หนังavนักเรียน" class="cat-checkbox sr-only">
-                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
                                 หนังavนักเรียน <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
                             </div>
                         </label>
                         <label class="cursor-pointer relative">
                             <input type="checkbox" name="category" value="av-family" data-text="หนังavครอบครัว" class="cat-checkbox sr-only">
-                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
                                 หนังavครอบครัว <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-teacher" data-text="หนังavคุณครู" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavคุณครู <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-cosplay" data-text="หนังavคอสเพลย์" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavคอสเพลย์ <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-nurse" data-text="หนังavพยาบาล" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavพยาบาล <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-swinging" data-text="หนังavเซ็กซ์หมู่" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavเซ็กซ์หมู่ <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-stealing-sleeping" data-text="หนังavลักหลับ" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavลักหลับ <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-office" data-text="หนังavสาวออฟฟิศ" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavสาวออฟฟิศ <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-xxxav" data-text="หนังavแอบเล่นชู้" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavแอบเล่นชู้ <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-masseuse" data-text="หนังavหมอนวด" class="cat-checkbox sr-only">
+                            <div class="px-2 py-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavหมอนวด <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
                             </div>
                         </label>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 shrink-0">
                     <div>
                         <label for="proxyInput" class="block text-xs font-semibold text-slate-400 uppercase mb-2">ทางผ่านพร็อกซี (API Proxy)</label>
                         <input type="text" id="proxyInput" name="proxyInput" value="/api/proxy?url=" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500 transition-colors" placeholder="/api/proxy?url=">
@@ -158,7 +221,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 shrink-0">
                     <div class="md:col-span-3">
                         <label for="startPage" class="block text-xs font-semibold text-slate-400 uppercase mb-2">เริ่มหน้า</label>
                         <div class="flex items-center">
@@ -188,7 +251,7 @@
                     </div>
                 </div>
 
-                <div class="bg-[#0B080D]/80 rounded-xl p-4 border border-rose-900/30">
+                <div class="bg-[#0B080D]/80 rounded-xl p-4 border border-rose-900/30 mt-auto">
                     <div class="flex items-center gap-3 mb-1">
                         <div class="w-2.5 h-2.5 rounded-full bg-slate-500" id="statusDot"></div>
                         <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">สถานะการทำงาน:</span>
@@ -329,7 +392,6 @@
     <script>
         localforage.config({ name: 'AVMisoHarvester', storeName: 'av_data' });
 
-        // **ตั้งค่า Base URL ของเว็บเป้าหมายที่นี่**
         let BASE_TARGET = 'https://avmisohd.to/'; 
         let BASE_CAT = `${BASE_TARGET}category/`; 
         
@@ -342,6 +404,16 @@
         let currentPage = 1;
         const ITEMS_PER_PAGE = 24;
         let searchTimeout = null; 
+
+        // Checkbox events
+        document.querySelectorAll('.cat-checkbox').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const icon = this.nextElementSibling.querySelector('.fa-check');
+                if (this.checked) icon.classList.remove('opacity-0');
+                else icon.classList.add('opacity-0');
+            });
+            if (cb.checked) cb.nextElementSibling.querySelector('.fa-check').classList.remove('opacity-0');
+        });
 
         // Utilities
         function escapeHTML(str) {
@@ -536,7 +608,6 @@
             // 1. หาลิงก์ Stream (พยายามหา iframe, video tag, หรือ m3u8)
             let streamUrls = [];
             
-            // ค้นหา iframe (มักจะเป็น Player) - อิงจากคลาส responsive-player
             const iframes = doc.querySelectorAll(".responsive-player iframe, iframe");
             iframes.forEach(ifr => {
                 let src = ifr.getAttribute("src") || ifr.getAttribute("data-src");
@@ -545,23 +616,19 @@
                 }
             });
 
-            // ค้นหา source ใน video tag
             const videos = doc.querySelectorAll("video source, video");
             videos.forEach(v => {
                 let src = v.getAttribute("src");
                 if(src && (src.includes('.mp4') || src.includes('.m3u8'))) streamUrls.push(src);
             });
 
-            // ถ้าหาไม่เจอจริงๆ ให้ Extract Regex หา .m3u8 ใน HTML
             if(streamUrls.length === 0) {
                 const m3u8Match = html.match(/(https?:\/\/[^"']+\.m3u8[^"']*)/i);
                 if(m3u8Match) streamUrls.push(m3u8Match[1]);
             }
 
-            // ลบลิงก์ที่ซ้ำกัน
             streamUrls = [...new Set(streamUrls)];
 
-            // จัดฟอร์แมท Episodes (หรือตอนเดี่ยว)
             let episodes = [];
             if(streamUrls.length > 0) {
                 streamUrls.forEach((url, idx) => {
@@ -575,9 +642,8 @@
                 episodes.push({ title: "Player Not Found (Requires Deep Scrape)", url: item.url, isDead: true });
             }
 
-            // 2. สกัด Tags/Code เล็กๆ จากชื่อเรื่อง
             let tags = [categoryText];
-            const codeMatch = item.title.match(/[a-zA-Z]{2,5}-\d{3,4}/i); // เช่น MIDV-123
+            const codeMatch = item.title.match(/[a-zA-Z]{2,5}-\d{3,4}/i);
             if(codeMatch) tags.push(codeMatch[0].toUpperCase());
 
             const id = item.postId || item.url.replace(BASE_TARGET, '').replace(/\//g, '-') || Date.now().toString();
@@ -634,7 +700,6 @@
                         }
                         if (!catHtml) continue;
 
-                        // ใช้ DOMParser เพื่อดึงข้อมูล Post จากหน้าหมวดหมู่โดยตรง
                         const doc = new DOMParser().parseFromString(catHtml, "text/html");
                         const videoBlocks = doc.querySelectorAll('.video-block');
                         
@@ -643,7 +708,6 @@
                             const aInfo = b.querySelector('a.infos');
                             const img = b.querySelector('img');
                             if (aInfo && aInfo.href) {
-                                // รองรับการทำ Lazy Load (data-src) ของ WP Rocket
                                 let src = img ? (img.getAttribute('data-src') || img.src) : '';
                                 if(src.startsWith('//')) src = 'https:' + src;
                                 
@@ -664,7 +728,6 @@
                         totalFound += items.length;
                         stats.textContent = `พบ ${totalFound} เรื่องในหมวด ${cat.text}`;
 
-                        // วนลูปเข้าไปดึงรายละเอียดของแต่ละเรื่อง (นำ URL ไปหาลิงก์สตรีมมิ่ง)
                         for (let i = 0; i < items.length; i++) {
                             if (isStopped) break;
                             const item = items[i];
