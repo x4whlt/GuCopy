@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AV Miso Harvester Pro v1.8 | Ultimate M3U8 Extractor</title>
+    <title>AV Miso Harvester Pro v1.9 | M3U8 Extractor & Referer Injector</title>
     
     <!-- Favicon Fix -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍑</text></svg>">
@@ -80,14 +80,14 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-rose-900/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.8 (Heuristic Force Mode)</span>
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.9 (Anti-Fake ID & Referer Injector)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-500 to-purple-600 mb-3">
                 AV MISO HARVESTER PRO
             </h1>
             <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto font-light leading-relaxed">
-                ระบบดึงข้อมูลวิดีโอ <span class="text-rose-400 font-medium">AVMISOHD</span> อัตโนมัติ พร้อมระบบเดาโครงสร้างลิงก์ (VdoHLS / Javzero)
-                <br class="hidden sm:block">รองรับ Proxy ทะลุบล็อคและระบบจัดการคลังเก็บข้อมูลส่วนตัว
+                ระบบดึงข้อมูลวิดีโอ <span class="text-rose-400 font-medium">AVMISOHD</span> อัตโนมัติ พร้อมทะลวง M3U8 ฝัง Referer 
+                <br class="hidden sm:block">ดูผ่านแอป VLC, IPTV ได้โดยไม่จอดำ รองรับ Proxy และคลังส่วนตัว
             </p>
         </header>
 
@@ -288,7 +288,7 @@
                 </div>
                 <div id="terminal" class="w-full bg-[#0B080D] rounded-xl p-3 font-mono text-[11px] leading-relaxed overflow-y-auto h-[250px] lg:h-[400px] text-slate-300 border border-slate-800/50">
                     <div class="text-rose-400">[SYSTEM]: พร้อมทำงานกับ avmisohd.to ...</div>
-                    <div class="text-emerald-400/80">[INFO]: โหมดเจาะ Heuristic (เดาโครงสร้าง VdoHLS) ทำงานแล้ว</div>
+                    <div class="text-emerald-400/80">[INFO]: โหมดเจาะลึก (Anti-Fake ID + Referer Injector) พร้อมใช้งาน</div>
                 </div>
             </div>
         </div>
@@ -302,7 +302,7 @@
                     </div>
                     <div>
                         <h3 class="text-lg font-bold text-white">จัดการคลังวิดีโอ & ส่งออก M3U</h3>
-                        <p class="text-xs text-slate-400">บันทึก Playlist นำไปเปิดในแอพดูหนัง</p>
+                        <p class="text-xs text-slate-400">บันทึก Playlist นำไปเปิดในแอพดูหนัง (รองรับทะลุบล็อค Referer)</p>
                     </div>
                 </div>
                 
@@ -385,7 +385,11 @@
                 
                 <div id="videoPlaceholder" class="text-center p-6">
                     <i class="fa-solid fa-compact-disc text-rose-500 text-5xl animate-spin mb-3"></i>
-                    <p class="text-slate-400 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีม...</p>
+                    <p class="text-slate-300 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีม...</p>
+                    <p class="text-rose-400 text-[11px] mt-3 max-w-sm mx-auto bg-rose-900/20 p-2 rounded border border-rose-900/50">
+                        * หากหมุนค้าง จอดำ หรือ 403 Forbidden แสดงว่าเว็บต้นทางล็อค Referer ไม่ให้เล่นบนหน้าเว็บอื่น<br>
+                        <b>ทางแก้:</b> ให้กด <span class="font-semibold underline">คัดลอกสคริปต์ M3U</span> ไปเปิดในแอป VLC หรือแอป IPTV แทน
+                    </p>
                 </div>
             </div>
             <div class="p-4 bg-[#0B080D] border-t border-slate-800 flex justify-between items-center gap-3">
@@ -629,46 +633,36 @@
             return null;
         }
 
+        // --- ENHANCED UNPACKER ---
         function unpackJS(code) {
             let unpacked = code;
-            // Robust unpacker loop to handle multi-packed JS
-            for (let i = 0; i < 3; i++) {
-                let payload = unpacked.match(/return\s+p\s*\}?\s*\(\s*(['"])([\s\S]*?)\1\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(['"])([\s\S]*?)\5\.split\(['"]\|['"]\)/);
-                if (payload) {
-                    let p = payload[2];
-                    let a = parseInt(payload[3]);
-                    let c = parseInt(payload[4]);
-                    let k = payload[6].split('|');
+            let regex = /eval\s*\(\s*function\s*\(\s*p\s*,\s*a\s*,\s*c\s*,\s*k\s*,\s*e\s*,\s*[dr]\s*\)\s*\{[\s\S]*?return\s+p\s*\}?\s*\(\s*(['"])([\s\S]*?)\1\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(['"])([\s\S]*?)\5\.split\(['"]\|['"]\)/;
+            
+            for (let i = 0; i < 5; i++) {
+                let match = unpacked.match(regex);
+                if (!match) {
+                    match = unpacked.match(/\}?\s*\(\s*(['"])([\s\S]*?)\1\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(['"])([\s\S]*?)\5\.split\(['"]\|['"]\)/);
+                }
+                
+                if (match) {
+                    let p = match[2];
+                    let a = parseInt(match[3]);
+                    let c = parseInt(match[4]);
+                    let k = match[6].split('|');
                     let e = function(c) {
                         return (c < a ? '' : e(parseInt(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36));
                     };
                     while(c--) {
-                        if(k[c]) {
-                            p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]);
-                        }
+                        if(k[c]) p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]);
                     }
                     unpacked = p;
                 } else {
-                    // Fallback to basic string parsing if regex didn't perfectly match structure
-                    let argsStr = unpacked.match(/}\s*\((.*?)\)\s*\)$/);
-                    if(argsStr) {
-                        let strings = [], strRegex = /['"]([^'"]*)['"]/g, sm;
-                        while ((sm = strRegex.exec(argsStr[1])) !== null) strings.push(sm[1]);
-                        let numbers = [], numRegex = /,\s*(\d+)\s*/g, nm;
-                        while ((nm = numRegex.exec(argsStr[1])) !== null) numbers.push(parseInt(nm[1]));
-                        if(strings.length >= 2 && numbers.length >= 2) {
-                            let p = strings[0], a = numbers[0], c = numbers[1], k = strings[1].split('|');
-                            let e = function(c) { return (c < a ? '' : e(parseInt(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36)); };
-                            while(c--) { if(k[c]) p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]); }
-                            unpacked = p;
-                        } else break;
-                    } else break;
+                    break;
                 }
             }
             return unpacked;
         }
 
-        // --- ENHANCED URL EXTRACTOR (NOW INCLUDES HEURISTIC BUILDER) ---
         function extractUrlsFromText(html) {
             let urls = [];
             let unescapedHtml = html;
@@ -714,6 +708,17 @@
             searchPatterns(html);
             if (html !== unescapedHtml) searchPatterns(unescapedHtml);
 
+            // Search for internal hidden IDs instead of faking them!
+            let internalIdMatch = unescapedHtml.match(/(?:file_id|videoId|video_id|id|source|vid)["'\s]*[:=]\s*["']([a-zA-Z0-9_-]{10,15})["']/gi);
+            if (internalIdMatch) {
+                internalIdMatch.forEach(match => {
+                    let idExtract = match.match(/(?:file_id|videoId|video_id|id|source|vid)["'\s]*[:=]\s*["']([a-zA-Z0-9_-]{10,15})["']/i);
+                    if (idExtract && idExtract[1] && (unescapedHtml.includes('vdohls') || unescapedHtml.includes('javzero') || unescapedHtml.includes('filemoon'))) {
+                        urls.push(`https://media.vdohls.com/${idExtract[1]}/video.m3u8`);
+                    }
+                });
+            }
+
             // Base64 Decoder
             let b64Matches = unescapedHtml.match(/[a-zA-Z0-9+\/=?_-]{20,}/g);
             if (b64Matches) {
@@ -735,26 +740,11 @@
                 packedMatches.forEach(packed => {
                     let unpacked = unpackJS(packed);
                     searchPatterns(unpacked); 
-                });
-            }
-
-            // --- HEURISTIC DICTIONARY BRUTE-FORCER ---
-            // If it's a Vdohls/Javzero script, we extract the split dictionary directly to find the ID
-            let fullDicts = unescapedHtml.match(/(['"])([\w\d|_-]*?)\1\.split\(['"]\|['"]\)/g);
-            if (fullDicts) {
-                fullDicts.forEach(dict => {
-                    let match = dict.match(/(['"])([\w\d|_-]*?)\1/);
-                    if (match && match[2]) {
-                        let words = match[2].split('|');
-                        let isTarget = words.includes('vdohls') || words.includes('video') || words.includes('m3u8');
-                        if (isTarget || unescapedHtml.includes('vdohls')) {
-                            // Target ID looks like alphanumeric with _ and -, length ~10-15 (e.g. 0tT-DlsMG_4Ad)
-                            let candidates = words.filter(w => w.length >= 10 && w.length <= 15 && /^[a-zA-Z0-9_-]+$/.test(w) && !/^(https|vdohls|media|video|sources|length|m3u8|mp4|cdn|www)$/i.test(w));
-                            candidates.forEach(id => {
-                                urls.push(`https://media.vdohls.com/${id}/video.m3u8`);
-                                urls.push(`https://cdn3.vdohls.com/${id}/video.m3u8`);
-                            });
-                        }
+                    
+                    // Search for internal ID again inside unpacked JS
+                    let innerIdMatch = unpacked.match(/(?:file_id|videoId|video_id|id|source|vid)["'\s]*[:=]\s*["']([a-zA-Z0-9_-]{10,15})["']/i);
+                    if (innerIdMatch && innerIdMatch[1]) {
+                        urls.push(`https://media.vdohls.com/${innerIdMatch[1]}/video.m3u8`);
                     }
                 });
             }
@@ -811,24 +801,13 @@
             // HTML Fetch Fallback
             const html = await requestWithRetry(url, 2, true); 
             if (!html || html === "404") {
-                // If HTML fails, but we have an embed ID, blindly guess the media.vdohls.com structure!
-                if (embedId && embedId.length >= 10) {
-                    appendLog(`[INFO] 🔓 เจาะทะลุด้วย Heuristic Engine (VdoHLS Build)`, 'text-fuchsia-400 font-semibold text-[10px]');
-                    return { urls: [`https://media.vdohls.com/${embedId}/video.m3u8`], type: 'video' };
-                }
                 return { urls: [], type: 'failed' };
             }
 
             let extracted = extractUrlsFromText(html);
             let m3u8s = extracted.filter(u => u.includes('.m3u8') || u.includes('.mp4') || u.includes('vdohls.com'));
             
-            // --- HEURISTIC EMBED ID BUILDER ---
-            // If the HTML was successfully parsed but NO m3u8 was found, we force build it using the ID!
-            if (m3u8s.length === 0 && embedId && embedId.length >= 10 && (html.includes('javzero') || html.includes('vdohls'))) {
-                m3u8s.push(`https://media.vdohls.com/${embedId}/video.m3u8`);
-                m3u8s.push(`https://cdn3.vdohls.com/${embedId}/video.m3u8`);
-                appendLog(`[INFO] 🔓 เจาะทะลุด้วย Heuristic Engine (Force Build ID)`, 'text-fuchsia-400 font-semibold text-[10px]');
-            }
+            // NOTE: Fake ID Heuristic has been completely removed to prevent generating non-working links!
 
             if (m3u8s.length > 0) {
                 return { urls: m3u8s, type: 'video' };
@@ -1117,12 +1096,12 @@
             const safeTitle = (data.title || 'AV Video').replace(/["',]/g, '').trim();
             const safeGroup = (data.categoryText || 'AV').replace(/["']/g, '');
             const safePoster = (data.poster || '').replace(/["']/g, '');
+            const defaultReferer = "https://javzero.xyz/"; // สำหรับฉีดหลอกเซิร์ฟเวอร์
 
             let validEps = 0;
             let optionsHtml = '';
             let hasM3u8File = false;
 
-            // Remove duplicates just in case heuristic added multiple subdomains of the same file
             let uniqueEpisodes = [];
             let seenUrls = new Set();
             data.episodes.forEach(ep => {
@@ -1135,7 +1114,18 @@
             uniqueEpisodes.forEach(ep => {
                 if (!ep.isDead) {
                     const safeEp = (ep.title || 'Main').replace(/["',]/g, '').trim();
-                    m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroup}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEp}\n${ep.url.trim()}\n`;
+                    const fullTitle = `${safeTitle} - ${safeEp}`;
+                    
+                    let finalUrl = ep.url.trim();
+                    m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroup}" tvg-name="${safeTitle}", ${fullTitle}\n`;
+                    m3u += `#EXTVLCOPT:http-referrer=${defaultReferer}\n`;
+                    
+                    if ((finalUrl.includes('vdohls.com') || finalUrl.includes('javzero')) && !finalUrl.includes('|')) {
+                        m3u += `${finalUrl}|Referer=${defaultReferer}\n`;
+                    } else {
+                        m3u += `${finalUrl}\n`;
+                    }
+
                     optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(ep.title)}</option>`;
                     validEps++;
                     if(ep.url.includes('.m3u8') || ep.url.includes('.mp4') || ep.url.includes('vdohls.com')) hasM3u8File = true;
@@ -1180,13 +1170,13 @@
                         
                         <!-- Accordion M3U Button -->
                         <button onclick="toggleSingleM3U(this)" class="mt-3 w-full text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg border border-slate-700 flex items-center justify-center gap-1.5 transition-colors">
-                            <i class="fa-solid fa-code"></i> สคริปต์ M3U
+                            <i class="fa-solid fa-code"></i> สคริปต์ M3U (ฝัง Referer)
                         </button>
                         <div class="m3u-wrapper hidden mt-2">
                             <div class="flex justify-end mb-1">
                                 <button onclick="copySingleM3U(this)" class="text-[10px] bg-rose-900/50 hover:bg-rose-800 px-2 py-0.5 rounded text-rose-300 flex items-center gap-1"><i class="fa-solid fa-copy"></i> คัดลอก</button>
                             </div>
-                            <textarea readonly class="w-full h-20 bg-black text-rose-400 p-2 rounded text-[10px] font-mono leading-relaxed border border-slate-800 focus:outline-none select-all">${escapeHTML(m3u)}</textarea>
+                            <textarea readonly class="w-full h-24 bg-black text-rose-400 p-2 rounded text-[10px] font-mono leading-relaxed border border-slate-800 focus:outline-none select-all">${escapeHTML(m3u)}</textarea>
                         </div>
                     </div>
                 </div>
@@ -1203,7 +1193,7 @@
             document.querySelectorAll('.m3u-wrapper:not(.hidden)').forEach(openWrap => {
                 openWrap.classList.add('hidden');
                 const prevBtn = openWrap.previousElementSibling;
-                if(prevBtn) prevBtn.innerHTML = `<i class="fa-solid fa-code"></i> สคริปต์ M3U`;
+                if(prevBtn) prevBtn.innerHTML = `<i class="fa-solid fa-code"></i> สคริปต์ M3U (ฝัง Referer)`;
             });
 
             if (isHidden) {
@@ -1220,6 +1210,8 @@
 
         function compileMegaM3U() {
             let mega = "\uFEFF#EXTM3U\n";
+            const defaultReferer = "https://javzero.xyz/";
+            
             gatheredSeries.forEach(s => {
                 const group = (s.categoryText || "AV").replace(/["']/g, '');
                 const title = (s.title || 'Video').replace(/["',]/g, '').trim();
@@ -1229,7 +1221,18 @@
                 s.episodes.forEach(ep => {
                     if(!ep.isDead && !seenUrls.has(ep.url)) {
                         seenUrls.add(ep.url);
-                        mega += `#EXTINF:-1 tvg-logo="${poster}" group-title="${group}" tvg-name="${title}", ${title}\n${ep.url.trim()}\n`;
+                        const safeEp = (ep.title || 'Main').replace(/["',]/g, '').trim();
+                        const fullTitle = `${title} - ${safeEp}`;
+                        
+                        let finalUrl = ep.url.trim();
+                        mega += `#EXTINF:-1 tvg-logo="${poster}" group-title="${group}" tvg-name="${title}", ${fullTitle}\n`;
+                        mega += `#EXTVLCOPT:http-referrer=${defaultReferer}\n`;
+                        
+                        if ((finalUrl.includes('vdohls.com') || finalUrl.includes('javzero')) && !finalUrl.includes('|')) {
+                            mega += `${finalUrl}|Referer=${defaultReferer}\n`;
+                        } else {
+                            mega += `${finalUrl}\n`;
+                        }
                     }
                 });
             });
@@ -1305,7 +1308,13 @@
                 hls.on(Hls.Events.ERROR, function(e, data) {
                     if (data.fatal) {
                         video.classList.add('hidden'); placeholder.classList.remove('hidden');
-                        placeholder.innerHTML = `<i class="fa-solid fa-link-slash text-rose-500 text-5xl mb-3"></i><p class="text-slate-300">สตรีมล้มเหลว หรือถูกบล็อคโดยเว็บต้นทาง</p>`;
+                        placeholder.innerHTML = `
+                            <i class="fa-solid fa-link-slash text-rose-500 text-5xl mb-3"></i>
+                            <p class="text-slate-300">สตรีมล้มเหลว เนื่องจากติดบล็อค Referer</p>
+                            <p class="text-rose-400 text-[11px] mt-3 max-w-sm mx-auto bg-rose-900/20 p-2 rounded border border-rose-900/50">
+                                <b>วิธีแก้:</b> ให้นำไฟล์ M3U ไปเปิดใน <b>VLC</b> หรือ <b>แอป IPTV</b> แทน เบราว์เซอร์จะไม่สามารถเล่นได้
+                            </p>
+                        `;
                     }
                 });
             } else {
@@ -1333,7 +1342,14 @@
             iframe.src = ''; 
             iframe.classList.add('hidden');
             
-            document.getElementById('videoPlaceholder').innerHTML = `<i class="fa-solid fa-compact-disc text-rose-500 text-5xl animate-spin mb-3"></i><p class="text-slate-400 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีม...</p>`;
+            document.getElementById('videoPlaceholder').innerHTML = `
+                <i class="fa-solid fa-compact-disc text-rose-500 text-5xl animate-spin mb-3"></i>
+                <p class="text-slate-300 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีม...</p>
+                <p class="text-rose-400 text-[11px] mt-3 max-w-sm mx-auto bg-rose-900/20 p-2 rounded border border-rose-900/50">
+                    * หากหมุนค้าง จอดำ หรือ 403 Forbidden แสดงว่าเว็บต้นทางล็อค Referer ไม่ให้เล่นบนหน้าเว็บอื่น<br>
+                    <b>ทางแก้:</b> ให้กด <span class="font-semibold underline">คัดลอกสคริปต์ M3U</span> ไปเปิดในแอป VLC หรือแอป IPTV แทน
+                </p>
+            `;
             document.getElementById('videoPlaceholder').classList.remove('hidden');
             
             if (activeHls) { activeHls.destroy(); activeHls = null; }
