@@ -166,7 +166,7 @@
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">เริ่มจากหน้า</label>
                         <div class="flex items-center">
                             <button type="button" onclick="adjustPage('startPage', -1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-l-lg border-y border-l border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-minus text-xs"></i></button>
-                            <input type="number" id="startPage" value="1" min="1" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
+                            <input type="number" id="startPage" value="1" min="1" onchange="validatePages()" oninput="validatePages()" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
                             <button type="button" onclick="adjustPage('startPage', 1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-r-lg border-y border-r border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-plus text-xs"></i></button>
                         </div>
                     </div>
@@ -176,7 +176,7 @@
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">ถึงหน้า</label>
                         <div class="flex items-center">
                             <button type="button" onclick="adjustPage('endPage', -1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-l-lg border-y border-l border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-minus text-xs"></i></button>
-                            <input type="number" id="endPage" value="1" min="1" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
+                            <input type="number" id="endPage" value="1" min="1" onchange="validatePages()" oninput="validatePages()" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
                             <button type="button" onclick="adjustPage('endPage', 1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-r-lg border-y border-r border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-plus text-xs"></i></button>
                         </div>
                     </div>
@@ -250,7 +250,7 @@
                     <button onclick="downloadAllM3U()" class="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-900 font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all">
                         <i class="fa-solid fa-circle-down text-lg"></i> โหลด M3U
                     </button>
-                    <!-- ปุ่มสำหรับส่งออกไปแอป (โครงสร้าง Hierarchical) ย้ายมาที่นี่และเปลี่ยนชื่อ -->
+                    <!-- ปุ่มสำหรับส่งออกไปแอป (โครงสร้าง Hierarchical) -->
                     <button onclick="exportIPTVJSON()" class="bg-fuchsia-900/50 hover:bg-fuchsia-800 border border-fuchsia-700 text-fuchsia-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="ส่งออก JSON สำหรับนำไปใช้ในแอปพลิเคชัน (แบบมีกลุ่ม)">
                         <i class="fa-solid fa-file-code text-lg"></i> โหลด JSON
                     </button>
@@ -488,6 +488,23 @@
             text.textContent = p + '%';
             if(detailText) detail.textContent = detailText;
         }
+        
+        // BUGFIX: จัดการเรื่องความถูกต้องของการกรอกหน้า เริ่ม-ถึง
+        function validatePages() {
+            const startInput = document.getElementById('startPage');
+            const endInput = document.getElementById('endPage');
+            
+            let startVal = parseInt(startInput.value);
+            let endVal = parseInt(endInput.value);
+            
+            if (isNaN(startVal) || startVal < 1) { startVal = 1; startInput.value = 1; }
+            if (isNaN(endVal) || endVal < 1) { endVal = 1; endInput.value = 1; }
+            
+            // ถ้าหน้าเริ่มต้นมากกว่าหน้าสิ้นสุด ให้ปรับหน้าสิ้นสุดตามไปอัตโนมัติ
+            if (startVal > endVal) {
+                endInput.value = startVal;
+            }
+        }
 
         function adjustPage(inputId, delta) {
             const input = document.getElementById(inputId);
@@ -496,6 +513,7 @@
             val += delta;
             if (val < 1) val = 1;
             input.value = val;
+            validatePages(); // ตรวจสอบความถูกต้องซ้ำ
         }
 
         // --- ระบบ Storage & JSON Sync ---
@@ -764,8 +782,7 @@
         function autoFormatEpisodes(episodes) {
             if (!episodes || episodes.length <= 1) return episodes;
             const hasExplicitSeason = episodes.some(ep => /(?:SS|Season|ภาค)[\s\.\-]*\d+/i.test(ep.title));
-            if (hasExplicitSeason) return episodes;
-
+            
             let ascCount = 0; let descCount = 0; let prevNum = -1;
             for (let ep of episodes) {
                 const num = getEpNum(ep.title);
@@ -774,7 +791,13 @@
                     prevNum = num;
                 }
             }
-            if (descCount > ascCount) return episodes; 
+            
+            // BUGFIX: ถ้าระบบเรียงตอนย้อนหลัง (Descending) เช่น 24 ไป 1 ให้สลับเพื่อให้เวลาเล่น M3U รันเรียงตอนได้ถูกต้อง
+            if (descCount > ascCount) {
+                episodes.reverse();
+            }
+
+            if (hasExplicitSeason) return episodes;
 
             let needsAutoSeason = false; let lastNum = -1;
             for (let ep of episodes) {
@@ -848,7 +871,7 @@
                     appendLog(`⚠️ ขัดข้อง (${errMsg}) ลองใหม่รอบ ${i+2}/${retries}...`, 'text-amber-500');
                     await sleep(2000);
                 } finally {
-                    clearTimeout(timeoutId); // ป้องกันบั๊ก Timeout ค้างหรืออ่าน Body ช้าเกิน
+                    clearTimeout(timeoutId); 
                     activeControllers.delete(controller);
                 }
             }
@@ -912,6 +935,7 @@
 
         async function startHarvesting() {
             if (activeHarvest) return;
+            validatePages(); // รันตรวจสอบเผื่อผู้ใช้งานพิมพ์เลขทิ้งไว้
             getAudioContext(); 
 
             const checkboxes = document.querySelectorAll('#categoryCheckboxes input[type="checkbox"]:checked');
@@ -1021,11 +1045,16 @@
                                         
                                         const safeId = CSS.escape(data.id);
                                         const oldCard = document.querySelector(`.card[data-id="${safeId}"]`);
+                                        
+                                        // DOM FIX: สร้างและแทนที่ให้ชัวร์ขึ้น ป้องกัน DOM แตก
                                         const tempContainer = document.createElement('div');
                                         renderCard(data, p, tempContainer); 
                                         
-                                        if(oldCard && tempContainer.firstChild) oldCard.parentNode.replaceChild(tempContainer.firstChild, oldCard);
-                                        else renderCard(data, p);
+                                        if(oldCard && tempContainer.firstChild) {
+                                            oldCard.replaceWith(tempContainer.firstChild);
+                                        } else {
+                                            renderCard(data, p);
+                                        }
                                         
                                         filterResults(); 
                                         if (isNewEpisodes) {
@@ -1187,7 +1216,7 @@
             
             countBadge.textContent = `${gatheredSeries.length} เรื่อง`;
             
-            // ใช้ตัวแปรตรวจเช็คการ Filter เพื่อให้ UI EmptyState ลิ้งค์ตรงตามผลลัพธ์
+            // ใช้ตัวแปรตรวจเช็คการ Filter เพื่อให้ UI EmptyState ลิ้งค์ตรงตามผลลัพธ์ที่ซ่อนอยู่จริง
             const term = document.getElementById('searchInput').value.toLowerCase();
             let visibleCount = 0;
             if (term) {
@@ -1334,6 +1363,8 @@
             
             if(targetContainer) targetContainer.appendChild(card);
             else document.getElementById("output").appendChild(card);
+            
+            // Re-check empty state just in case
             updateGlobalActions();
         }
 
@@ -1345,7 +1376,7 @@
                 if (searchStr.includes(term)) { card.classList.remove('hidden'); } 
                 else { card.classList.add('hidden'); }
             });
-            updateGlobalActions(); // Update empty state
+            updateGlobalActions(); 
         }
 
         function toggleSingleM3U(btn) {
@@ -1417,8 +1448,13 @@
             const placeholder = document.getElementById('videoPlaceholder');
             video.classList.add('hidden'); placeholder.classList.remove('hidden');
 
+            // HLS BUGFIX: เสริมการล้างเมมโมรีก่อนสร้างอินสแตนซ์ใหม่
+            if (activeHls) {
+                activeHls.destroy();
+                activeHls = null;
+            }
+
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-                if (activeHls) activeHls.destroy();
                 const hls = new Hls(); activeHls = hls;
                 hls.loadSource(url); hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
