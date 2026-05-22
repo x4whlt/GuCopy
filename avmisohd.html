@@ -80,7 +80,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-rose-900/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.3.0 (Mega Categories)</span>
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.3.1 (Bug Fixed)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-500 to-purple-600 mb-3">
                 AV MISO HARVESTER PRO
@@ -208,7 +208,9 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 shrink-0">
                     <div>
                         <label for="proxyInput" class="block text-xs font-semibold text-slate-400 uppercase mb-2">ทางผ่านพร็อกซี (API Proxy)</label>
+                        <!-- CHANGED: Reverted to use custom backend proxy -->
                         <input type="text" id="proxyInput" name="proxyInput" value="/api/proxy?url=" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500 transition-colors" placeholder="/api/proxy?url=">
+                        <p class="text-[9px] text-emerald-400 mt-1">* เชื่อมต่อกับไฟล์ api/proxy.js ของคุณแล้ว</p>
                     </div>
 
                     <div>
@@ -370,7 +372,7 @@
                 </button>
             </div>
             <div class="aspect-video bg-black relative flex items-center justify-center">
-                <video id="hlsPlayer" controls class="w-full h-full object-contain hidden"></video>
+                <video id="hlsPlayer" controls playsinline class="w-full h-full object-contain hidden"></video>
                 <div id="videoPlaceholder" class="text-center p-6">
                     <i class="fa-solid fa-compact-disc text-rose-500 text-5xl animate-spin mb-3"></i>
                     <p class="text-slate-400 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีม...</p>
@@ -460,11 +462,20 @@
             if(detailText) detail.textContent = detailText;
         }
 
+        // CHANGED: Fixed Page Validation logic
         function validatePages() {
-            let startVal = parseInt(document.getElementById('startPage').value);
-            let endVal = parseInt(document.getElementById('endPage').value);
-            if (isNaN(startVal) || startVal < 1) document.getElementById('startPage').value = 1;
-            if (isNaN(endVal) || endVal < 1) document.getElementById('endPage').value = 1;
+            let startInput = document.getElementById('startPage');
+            let endInput = document.getElementById('endPage');
+            
+            let startVal = parseInt(startInput.value);
+            let endVal = parseInt(endInput.value);
+            
+            if (isNaN(startVal) || startVal < 1) { startVal = 1; startInput.value = 1; }
+            if (isNaN(endVal) || endVal < 1) { endVal = 1; endInput.value = 1; }
+            
+            if (endVal < startVal) {
+                endInput.value = startVal; // Force end page to be at least start page
+            }
         }
 
         function adjustPage(inputId, delta) {
@@ -545,25 +556,6 @@
             const startItem = ((currentPage - 1) * ITEMS_PER_PAGE) + 1;
             const endItem = Math.min(currentPage * ITEMS_PER_PAGE, currentDisplayList.length);
             infoText.textContent = `แสดงรายการ ${startItem} - ${endItem} จาก ${currentDisplayList.length}`;
-        }
-
-        function updateGlobalActionsUI() {
-            const container = document.getElementById('globalActions');
-            const emptyState = document.getElementById('emptyState');
-            const countBadge = document.getElementById('countBadge');
-            const outputEl = document.getElementById('output');
-            
-            countBadge.textContent = `${gatheredSeries.length} เรื่อง`;
-            gatheredSeries.length > 0 ? container.classList.remove('hidden') : container.classList.add('hidden');
-            
-            if (currentDisplayList.length === 0) {
-                emptyState.classList.remove('hidden');
-                outputEl.classList.add('hidden');
-                document.getElementById('paginationContainer').classList.add('hidden');
-            } else {
-                emptyState.classList.add('hidden');
-                outputEl.classList.remove('hidden');
-            }
         }
 
         // --- Core Fetching Logic ---
@@ -670,6 +662,7 @@
             if (activeHarvest) return;
             const startPage = parseInt(document.getElementById("startPage").value) || 1; 
             const endPage = parseInt(document.getElementById("endPage").value) || 1;
+            const concurrencyLimit = parseInt(document.getElementById("speedSelect").value) || 5; // CHANGED: Get speed
             
             const checkboxes = document.querySelectorAll('#categoryCheckboxes input[type="checkbox"]:checked');
             if (checkboxes.length === 0) { showToast('เลือกอย่างน้อย 1 หมวดหมู่!', 'error'); return; }
@@ -708,8 +701,10 @@
                             const aInfo = b.querySelector('a.infos');
                             const img = b.querySelector('img');
                             if (aInfo && aInfo.href) {
-                                let src = img ? (img.getAttribute('data-src') || img.src) : '';
+                                // CHANGED: Fixed Image Source parsing
+                                let src = img ? (img.getAttribute('data-src') || img.getAttribute('src')) : '';
                                 if(src.startsWith('//')) src = 'https:' + src;
+                                else if(src.startsWith('/')) src = BASE_TARGET.replace(/\/$/, '') + src;
                                 
                                 items.push({
                                     url: aInfo.href,
@@ -728,26 +723,31 @@
                         totalFound += items.length;
                         stats.textContent = `พบ ${totalFound} เรื่องในหมวด ${cat.text}`;
 
-                        for (let i = 0; i < items.length; i++) {
+                        // CHANGED: Implemented Concurrency (Threads) logic
+                        for (let i = 0; i < items.length; i += concurrencyLimit) {
                             if (isStopped) break;
-                            const item = items[i];
+                            const chunk = items.slice(i, i + concurrencyLimit);
                             
-                            loader.textContent = `⏳ หน้า ${p} | เรื่อง ${i+1}/${items.length}`;
-                            updateProgress((((globalPageCounter - 1) / totalPagesToScan) * 100) + (((i + 1) / items.length) * (100 / totalPagesToScan)), item.title);
+                            loader.textContent = `⏳ หน้า ${p} | กำลังโหลดกลุ่มที่ ${Math.ceil((i+1)/concurrencyLimit)}/${Math.ceil(items.length/concurrencyLimit)}`;
+                            updateProgress((((globalPageCounter - 1) / totalPagesToScan) * 100) + (((i + 1) / items.length) * (100 / totalPagesToScan)), `ดึงข้อมูลทีละ ${concurrencyLimit} เรื่อง`);
                             
-                            await sleep(Math.floor(Math.random() * 500) + 500); 
-                            const data = await parseVideoPage(item, cat.text);
-                            
-                            if (data) {
-                                const existIdx = gatheredSeries.findIndex(s => s.id === data.id);
-                                if (existIdx !== -1) {
-                                    gatheredSeries[existIdx] = data; // Update existing
-                                } else {
-                                    gatheredSeries.push(data);
+                            const chunkPromises = chunk.map(async (item) => {
+                                await sleep(Math.floor(Math.random() * 500) + 200); 
+                                const data = await parseVideoPage(item, cat.text);
+                                if (data) {
+                                    const existIdx = gatheredSeries.findIndex(s => s.id === data.id);
+                                    if (existIdx !== -1) {
+                                        gatheredSeries[existIdx] = data;
+                                    } else {
+                                        gatheredSeries.push(data);
+                                    }
+                                    appendLog(`✅ เก็บข้อมูล: ${data.title.substring(0, 30)}...`, 'text-pink-300');
                                 }
-                                appendLog(`✅ เก็บข้อมูล: ${data.title.substring(0, 30)}...`, 'text-pink-300');
-                            }
+                            });
+
+                            await Promise.all(chunkPromises);
                         }
+                        
                         await saveToStorage();
                         filterAndRender(false);
                     }
