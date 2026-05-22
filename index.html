@@ -79,14 +79,14 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-slate-700/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 5.1 God Tier</span>
+                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 6.0 Performance Build</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-yellow-300 to-blue-500 mb-3">
                 SERIES HARVESTER PRO
             </h1>
             <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto font-light leading-relaxed">
-                สุดยอดเครื่องมือดึงข้อมูลซีรีส์ <span class="text-amber-400 font-medium">Infinite Storage</span> และระบบคิวจัดหมวดหมู่อัจฉริยะ 
-                <br class="hidden sm:block">พร้อมฟีเจอร์ตรวจเช็กลิงก์เสีย ทะลวงกำแพง HLS และ Backup สำรองข้อมูล
+                สุดยอดเครื่องมือดึงข้อมูลซีรีส์ <span class="text-amber-400 font-medium">Infinite Storage</span> พร้อมระบบ Smart Sync 
+                <br class="hidden sm:block">และ Virtual DOM Pagination รองรับข้อมูลหลักหมื่นเรื่องโดยไม่กระตุก
             </p>
         </header>
 
@@ -160,34 +160,33 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <!-- Page range start -->
-                    <div>
+                <!-- Page Inputs & Buttons -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+                    <div class="md:col-span-3">
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">เริ่มจากหน้า</label>
                         <div class="flex items-center">
                             <button type="button" onclick="adjustPage('startPage', -1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-l-lg border-y border-l border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-minus text-xs"></i></button>
-                            <!-- FIX 1: Removed oninput="validatePages()" to prevent input jumping while typing -->
                             <input type="number" id="startPage" value="1" min="1" onchange="validatePages()" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
                             <button type="button" onclick="adjustPage('startPage', 1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-r-lg border-y border-r border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-plus text-xs"></i></button>
                         </div>
                     </div>
-
-                    <!-- Page range end -->
-                    <div>
+                    <div class="md:col-span-3">
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">ถึงหน้า</label>
                         <div class="flex items-center">
                             <button type="button" onclick="adjustPage('endPage', -1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-l-lg border-y border-l border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-minus text-xs"></i></button>
-                            <!-- FIX 1: Removed oninput="validatePages()" -->
                             <input type="number" id="endPage" value="1" min="1" onchange="validatePages()" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
                             <button type="button" onclick="adjustPage('endPage', 1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-r-lg border-y border-r border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-plus text-xs"></i></button>
                         </div>
                     </div>
 
-                    <!-- Action buttons wrapper -->
-                    <div class="flex flex-col justify-end">
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="btnStart" onclick="startHarvesting()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold h-9 rounded-lg shadow-md flex items-center justify-center gap-1.5 transition-all">
+                    <!-- Action buttons -->
+                    <div class="md:col-span-6 flex flex-col justify-end">
+                        <div class="grid grid-cols-3 gap-2">
+                            <button id="btnStart" onclick="startHarvesting()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold h-9 rounded-lg shadow-md flex items-center justify-center gap-1.5 transition-all" title="สแกนหมวดหมู่หน้าใหม่">
                                 <i class="fa-solid fa-play text-xs"></i> สแกน
+                            </button>
+                            <button id="btnSync" onclick="smartSync()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold h-9 rounded-lg shadow-md flex items-center justify-center gap-1.5 transition-all" title="สแกนหาตอนใหม่เฉพาะเรื่องที่มีในคลังแล้ว">
+                                <i class="fa-solid fa-rotate text-xs"></i> อัปเดตคลัง
                             </button>
                             <button id="btnStop" onclick="stopHarvesting()" disabled class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-not-allowed">
                                 <i class="fa-solid fa-circle-stop text-xs"></i> หยุด
@@ -236,7 +235,6 @@
         <!-- Global Actions / Playlists Download Section -->
         <div id="globalActions" class="hidden mb-6 bg-gradient-to-r from-blue-900/40 via-purple-900/40 to-slate-900/40 rounded-2xl p-6 border border-blue-500/30">
             <div class="flex flex-col items-center justify-center gap-5">
-                <!-- Header part: Always on top -->
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 border-b border-slate-700/50 pb-4 w-full text-center sm:text-left">
                     <div class="p-3 bg-blue-500/20 rounded-xl border border-blue-500/40 shrink-0">
                         <i class="fa-solid fa-database text-2xl text-blue-400 animate-bounce"></i>
@@ -247,12 +245,10 @@
                     </div>
                 </div>
                 
-                <!-- Action Buttons: Always below the header -->
                 <div class="flex flex-wrap justify-center items-center gap-3 w-full">
                     <button onclick="downloadAllM3U()" class="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-900 font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all">
                         <i class="fa-solid fa-circle-down text-lg"></i> โหลด M3U
                     </button>
-                    <!-- ปุ่มสำหรับส่งออกไปแอป (โครงสร้าง Hierarchical) -->
                     <button onclick="exportIPTVJSON()" class="bg-fuchsia-900/50 hover:bg-fuchsia-800 border border-fuchsia-700 text-fuchsia-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="ส่งออก JSON สำหรับนำไปใช้ในแอปพลิเคชัน (แบบมีกลุ่ม)">
                         <i class="fa-solid fa-file-code text-lg"></i> โหลด JSON
                     </button>
@@ -260,13 +256,12 @@
                         <i class="fa-solid fa-copy"></i> คัดลอก
                     </button>
                     
-                    <div class="w-px h-8 bg-slate-700/50 hidden sm:block mx-1"></div> <!-- Divider -->
+                    <div class="w-px h-8 bg-slate-700/50 hidden sm:block mx-1"></div>
 
                     <button onclick="verifyLinks()" id="btnVerify" class="bg-indigo-600/50 hover:bg-indigo-500 border border-indigo-500/50 text-indigo-100 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="สแกนหาลิงก์เสียทั้งหมด">
                         <i class="fa-solid fa-heart-pulse"></i> เช็กลิงก์เสีย
                     </button>
                     
-                    <!-- ปุ่มสำหรับสำรองฐานข้อมูล (โครงสร้างดิบสำหรับนำเข้า) -->
                     <button onclick="backupDatabase()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="บันทึกฐานข้อมูลดิบและรูปภาพเก็บไว้ในคอมเพื่อนำเข้าใหม่">
                         <i class="fa-solid fa-database"></i> สำรองข้อมูล
                     </button>
@@ -276,7 +271,7 @@
                         <i class="fa-solid fa-file-import"></i> กู้คืนข้อมูล
                     </label>
 
-                    <div class="w-px h-8 bg-slate-700/50 hidden sm:block mx-1"></div> <!-- Divider -->
+                    <div class="w-px h-8 bg-slate-700/50 hidden sm:block mx-1"></div>
 
                     <button id="btnClearCache" onclick="clearData()" class="bg-rose-900/50 hover:bg-rose-800 border border-rose-700/50 text-rose-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all">
                         <i class="fa-solid fa-trash-can"></i> ล้างระบบ
@@ -285,23 +280,52 @@
             </div>
         </div>
 
-        <!-- Filter and Search -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <h2 class="text-2xl font-black text-slate-100 flex items-center gap-3">
-                <i class="fa-solid fa-compact-disc text-blue-500"></i> ผลลัพธ์รายการซีรีส์ 
+        <!-- Filter, Sort and Search (Upgraded) -->
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-4 mb-6 bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+            <h2 class="text-2xl font-black text-slate-100 flex items-center gap-3 w-full lg:w-auto">
+                <i class="fa-solid fa-compact-disc text-blue-500"></i> คลังซีรีส์ 
                 <span id="countBadge" class="text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2.5 py-1 rounded-full shadow-inner">0 เรื่อง</span>
             </h2>
-            <div class="relative w-full sm:w-80">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
-                <input type="text" id="searchInput" oninput="filterResults()" placeholder="ค้นหาซีรีส์, พากย์ไทย, ซับไทย..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition-colors shadow-inner">
+            
+            <div class="flex flex-col sm:flex-row w-full lg:w-auto gap-3">
+                <!-- Sort Dropdown -->
+                <div class="relative min-w-[180px]">
+                    <select id="sortSelect" onchange="filterAndRender()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition-colors shadow-inner appearance-none cursor-pointer">
+                        <option value="newest">📌 เรียงจากล่าสุด (ล่างขึ้นบน)</option>
+                        <option value="oldest">🕰️ เรียงจากเก่าสุด (บนลงล่าง)</option>
+                        <option value="episodes">🎬 จำนวนตอนเยอะสุด</option>
+                        <option value="deadlinks">💀 พบลิงก์เสียเยอะสุด</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+                </div>
+                
+                <!-- Search Box -->
+                <div class="relative w-full sm:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                    <input type="text" id="searchInput" oninput="handleSearchDebounced()" placeholder="ค้นหาซีรีส์, พากย์ไทย, ซับไทย..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition-colors shadow-inner">
+                </div>
             </div>
         </div>
 
-        <!-- Grid Results -->
-        <div id="output" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+        <!-- Grid Results (Paginated) -->
+        <div id="output" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[400px] content-start"></div>
         
+        <!-- Pagination Controls -->
+        <div id="paginationContainer" class="hidden flex flex-col sm:flex-row items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 mt-8">
+            <p class="text-sm text-slate-400 mb-4 sm:mb-0" id="pageInfoText">แสดงรายการ 1 - 24 จากทั้งหมด 0 รายการ</p>
+            <div class="flex items-center gap-2">
+                <button onclick="changePage(-1)" id="btnPrevPage" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-10 rounded-lg border border-slate-700 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div class="px-4 py-2 bg-slate-950 rounded-lg border border-slate-800 text-sm font-bold text-amber-500" id="currentPageDisplay">หน้า 1 / 1</div>
+                <button onclick="changePage(1)" id="btnNextPage" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-10 rounded-lg border border-slate-700 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
         <!-- Empty Placeholder -->
-        <div id="emptyState" class="text-center py-20 bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-800">
+        <div id="emptyState" class="text-center py-20 bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-800 hidden">
             <i class="fa-solid fa-layer-group text-slate-700 text-6xl mb-4"></i>
             <h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลที่จะแสดงผล</h3>
             <p class="text-sm text-slate-600 max-w-sm mx-auto mt-1">ตั้งค่าช่วงหน้าเว็บและคลิกปุ่มสแกนข้อมูลด้านบนเพื่อรับรายการคอนเทนต์</p>
@@ -339,7 +363,6 @@
         </div>
     </div>
 
-    <!-- Toast Notification Custom Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
 
     <!-- Custom Confirm Modal -->
@@ -360,11 +383,8 @@
     </div>
 
     <script>
-        // ตั้งค่า LocalForage สำหรับ IndexedDB
-        localforage.config({
-            name: 'SeriesHarvesterPro',
-            storeName: 'series_data'
-        });
+        // --- ฐานข้อมูล IndexedDB ---
+        localforage.config({ name: 'SeriesHarvesterPro', storeName: 'series_data' });
 
         let BASE_CAT = 'https://kubhd24.net/category/';
         let activeHarvest = false;
@@ -373,6 +393,12 @@
         let storageFullFlag = false; 
         let activeControllers = new Set();
         
+        // --- ระบบ Pagination State ---
+        let currentDisplayList = [];
+        let currentPage = 1;
+        const ITEMS_PER_PAGE = 24;
+        let searchTimeout = null; // ตัวแปรสำหรับระบบ Debounce ค้นหา
+
         // --- ระบบเสียงและ Toast ---
         let audioCtx = null;
         function getAudioContext() {
@@ -394,7 +420,7 @@
                 gain.connect(ctx.destination);
                 osc.start(ctx.currentTime + delay);
                 osc.stop(ctx.currentTime + delay + duration);
-            } catch (e) { console.warn("Audio playback failed: ", e); }
+            } catch (e) { console.warn("Audio playback failed"); }
         }
 
         function triggerSound(type) {
@@ -403,7 +429,7 @@
                 else if (type === 'done') { playTone(783.99, 0.15, 'sine', 0); playTone(987.77, 0.15, 'sine', 0.1); playTone(1046.50, 0.30, 'sine', 0.2); } 
                 else if (type === 'error') { playTone(174.61, 0.35, 'triangle', 0); } 
                 else if (type === 'tick') { playTone(261.63, 0.06, 'triangle', 0); }
-            } catch (e) { console.log("Sound error: ", e); }
+            } catch (e) {}
         }
 
         function showToast(message, type = 'info') {
@@ -426,7 +452,6 @@
             });
         }
 
-        // --- ระบบ Custom Confirm Modal ---
         function showConfirm(message) {
             return new Promise((resolve) => {
                 const modal = document.getElementById('confirmModal');
@@ -437,27 +462,19 @@
 
                 msgEl.textContent = message;
                 modal.classList.remove('hidden');
-                void modal.offsetWidth; // Trigger reflow
+                void modal.offsetWidth; 
                 modal.classList.remove('opacity-0');
                 box.classList.remove('scale-95');
 
                 const closeModal = (result) => {
                     modal.classList.add('opacity-0');
                     box.classList.add('scale-95');
-                    setTimeout(() => {
-                        modal.classList.add('hidden');
-                        resolve(result);
-                    }, 300);
-                    
+                    setTimeout(() => { modal.classList.add('hidden'); resolve(result); }, 300);
                     btnOk.removeEventListener('click', onOk);
                     btnCancel.removeEventListener('click', onCancel);
                 };
-
-                const onOk = () => closeModal(true);
-                const onCancel = () => closeModal(false);
-
-                btnOk.addEventListener('click', onOk);
-                btnCancel.addEventListener('click', onCancel);
+                const onOk = () => closeModal(true); const onCancel = () => closeModal(false);
+                btnOk.addEventListener('click', onOk); btnCancel.addEventListener('click', onCancel);
             });
         }
 
@@ -483,41 +500,31 @@
             
             let validPercent = percent;
             if (isNaN(validPercent) || !isFinite(validPercent)) validPercent = 0;
-            
             let p = Math.min(Math.max(validPercent, 0), 100).toFixed(1);
+            
             bar.style.width = p + '%';
             text.textContent = p + '%';
             if(detailText) detail.textContent = detailText;
         }
         
-        // FIX 1: ปรับปรุงการตรวจสอบเลขหน้า ไม่ให้ UI กระโดดเวลาลบตัวเลขเพื่อจะพิมพ์ใหม่
         function validatePages() {
             const startInput = document.getElementById('startPage');
             const endInput = document.getElementById('endPage');
+            let startVal = parseInt(startInput.value); let endVal = parseInt(endInput.value);
             
-            let startVal = parseInt(startInput.value);
-            let endVal = parseInt(endInput.value);
-            
-            // ปล่อยให้ช่องว่าง (NaN) เป็นไปตามที่พิมพ์ แต่จะแก้ไขเมื่อฟอร์มเสียโฟกัส หรือตอนกดปุ่มสแกน
-            if (!isNaN(startVal) && !isNaN(endVal)) {
-                 if (startVal < 1) startInput.value = 1;
-                 if (endVal < 1) endInput.value = 1;
-                 
-                 // ย้ายการเช็ค start > end ไปไว้ใน startHarvesting() เพื่อให้ผู้ใช้กรอกข้อมูลได้อิสระขึ้น
-            }
+            // BUGFIX: จัดการกรณีลบช่องว่างจนเป็น NaN ให้บังคับเป็นหน้า 1
+            if (isNaN(startVal) || startVal < 1) { startVal = 1; startInput.value = 1; }
+            if (isNaN(endVal) || endVal < 1) { endVal = 1; endInput.value = 1; }
         }
 
         function adjustPage(inputId, delta) {
             const input = document.getElementById(inputId);
             let val = parseInt(input.value);
-            if (isNaN(val)) val = 1;
-            val += delta;
-            if (val < 1) val = 1;
-            input.value = val;
-            validatePages();
+            if (isNaN(val)) val = 1; val += delta; if (val < 1) val = 1;
+            input.value = val; validatePages();
         }
 
-        // --- ระบบ Storage & JSON Sync ---
+        // --- ระบบ Storage & Pagination Sync ---
         async function saveToStorage() {
             try {
                 await localforage.setItem('harvesterData', gatheredSeries);
@@ -537,26 +544,136 @@
             if(isConfirmed) {
                 await localforage.removeItem('harvesterData');
                 gatheredSeries = [];
-                refreshOutput();
+                filterAndRender();
                 showToast('ล้างฐานข้อมูลสำเร็จ!', 'success');
                 appendLog('[SYSTEM] ล้างข้อมูลใน IndexedDB เรียบร้อยแล้ว', 'text-amber-400');
-                storageFullFlag = false;
             }
         }
 
-        function refreshOutput() {
-            document.getElementById('output').innerHTML = '';
-            gatheredSeries.forEach(data => renderCard(data, data.pageNum || 'Offline'));
-            filterResults();
-            updateGlobalActions();
+        // *** ระบบ Debounce ป้องกัน UI ค้างเวลาพิมพ์ค้นหาเร็วๆ ***
+        function handleSearchDebounced() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                filterAndRender();
+            }, 300); // รอให้ผู้ใช้หยุดพิมพ์ 300ms ค่อยรันคำสั่งค้นหา
         }
 
+        // *** เปลี่ยนแปลง: เพิ่มระบบจัดการแสดงผลหน้า (Pagination & Filter) ***
+        function filterAndRender(resetPage = true) {
+            if(resetPage) currentPage = 1;
+            
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const sortMode = document.getElementById('sortSelect').value;
+            
+            // 1. Filter
+            currentDisplayList = gatheredSeries.filter(series => {
+                const tagString = series.tags ? series.tags.map(t => t.text).join(' ') : '';
+                const searchKeywords = `${series.title} ${series.cleanTitle} ${tagString}`.toLowerCase();
+                return searchKeywords.includes(term);
+            });
+
+            // 2. Sort
+            if(sortMode === 'newest') {
+                currentDisplayList.reverse(); // ข้อมูลที่เข้ามาล่าสุดจะอยู่ท้าย Array, reverse เพื่อให้ล่าสุดอยู่บน
+            } else if(sortMode === 'episodes') {
+                currentDisplayList.sort((a, b) => b.episodes.length - a.episodes.length);
+            } else if(sortMode === 'deadlinks') {
+                currentDisplayList.sort((a, b) => {
+                    let aDead = a.episodes.filter(ep=>ep.isDead).length;
+                    let bDead = b.episodes.filter(ep=>ep.isDead).length;
+                    return bDead - aDead;
+                });
+            } // 'oldest' ใช้แบบ default array order
+
+            renderCurrentPage();
+            updateGlobalActionsUI();
+        }
+
+        function renderCurrentPage() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+            
+            if(currentDisplayList.length === 0) return; // Empty state handled by updateGlobalActionsUI
+
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            const itemsToRender = currentDisplayList.slice(startIndex, endIndex);
+
+            itemsToRender.forEach(data => renderCard(data, data.pageNum || 'Offline'));
+            updatePaginationUI();
+        }
+
+        function changePage(direction) {
+            const totalPages = Math.ceil(currentDisplayList.length / ITEMS_PER_PAGE);
+            currentPage += direction;
+            if(currentPage < 1) currentPage = 1;
+            if(currentPage > totalPages) currentPage = totalPages;
+            renderCurrentPage();
+            
+            // เลื่อนจอขึ้นไปด้านบนสุดของผลลัพธ์เพื่อ UX ที่ดี
+            document.getElementById('countBadge').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function updatePaginationUI() {
+            const container = document.getElementById('paginationContainer');
+            const btnPrev = document.getElementById('btnPrevPage');
+            const btnNext = document.getElementById('btnNextPage');
+            const pageDisplay = document.getElementById('currentPageDisplay');
+            const infoText = document.getElementById('pageInfoText');
+
+            if(currentDisplayList.length <= ITEMS_PER_PAGE && currentDisplayList.length > 0) {
+                container.classList.remove('hidden');
+                btnPrev.disabled = true; btnNext.disabled = true;
+                pageDisplay.textContent = "หน้า 1 / 1";
+                infoText.textContent = `แสดงรายการทั้งหมด ${currentDisplayList.length} รายการ`;
+                return;
+            } else if (currentDisplayList.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            const totalPages = Math.ceil(currentDisplayList.length / ITEMS_PER_PAGE);
+            
+            // BUGFIX: ล็อคปุ่มหากกำลังสแกนอยู่ (activeHarvest === true) ป้องกัน DOM พัง
+            btnPrev.disabled = (currentPage === 1) || activeHarvest;
+            btnNext.disabled = (currentPage === totalPages) || activeHarvest;
+            
+            pageDisplay.textContent = `หน้า ${currentPage} / ${totalPages}`;
+            
+            const startItem = ((currentPage - 1) * ITEMS_PER_PAGE) + 1;
+            const endItem = Math.min(currentPage * ITEMS_PER_PAGE, currentDisplayList.length);
+            infoText.textContent = `แสดงรายการ ${startItem} - ${endItem} จากทั้งหมด ${currentDisplayList.length} รายการ`;
+        }
+
+        function updateGlobalActionsUI() {
+            const container = document.getElementById('globalActions');
+            const emptyState = document.getElementById('emptyState');
+            const countBadge = document.getElementById('countBadge');
+            
+            countBadge.textContent = `${gatheredSeries.length} เรื่อง`;
+            
+            if (gatheredSeries.length > 0) container.classList.remove('hidden'); 
+            else container.classList.add('hidden'); 
+            
+            if (currentDisplayList.length === 0 && gatheredSeries.length > 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.innerHTML = `<i class="fa-solid fa-magnifying-glass text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ไม่พบซีรีส์ที่ค้นหา</h3><p class="text-sm text-slate-600 mt-1">ลองเปลี่ยนคำค้นหา หรือรูปแบบการจัดเรียง</p>`;
+                document.getElementById('paginationContainer').classList.add('hidden');
+            } else if (currentDisplayList.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.innerHTML = `<i class="fa-solid fa-layer-group text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลที่จะแสดงผล</h3><p class="text-sm text-slate-600 max-w-sm mx-auto mt-1">ตั้งค่าช่วงหน้าเว็บและคลิกปุ่มสแกนข้อมูลด้านบนเพื่อรับรายการคอนเทนต์</p>`;
+                document.getElementById('paginationContainer').classList.add('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+        }
+
+        // --- JSON & Export Sync ---
         function exportIPTVJSON() {
             if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้ส่งออก", "error"); return; }
-            
             const exportData = {
-                name: "kubhd24",
-                author: "Auto Update",
+                name: "kubhd24", author: "Auto Update",
                 image: "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Y3o5Nmszb29mYWxreTQ2cjFpeWZoaGJ6MWJicDBqbmJvdHJxamJ5byZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/OQci2SBvkH3Evhroy0/giphy.gif",
                 groups: []
             };
@@ -564,9 +681,7 @@
             const groupedByCategory = {};
             gatheredSeries.forEach(series => {
                 const catName = "📂 " + (series.categoryText || "ซีรีส์ทั่วไป");
-                if (!groupedByCategory[catName]) {
-                    groupedByCategory[catName] = [];
-                }
+                if (!groupedByCategory[catName]) groupedByCategory[catName] = [];
                 groupedByCategory[catName].push(series);
             });
 
@@ -578,26 +693,16 @@
                 };
 
                 groupedByCategory[catName].forEach(series => {
-                    const tagString = series.tags && series.tags.length > 0 
-                                      ? series.tags.map(t => t.text).join(' | ') 
-                                      : "";
+                    const tagString = series.tags && series.tags.length > 0 ? series.tags.map(t => t.text).join(' | ') : "";
                     const infoText = tagString ? `${tagString} | EP 1 - ${series.episodes.length} จบ` : `EP 1 - ${series.episodes.length} จบ`;
-                    
-                    const seriesObj = {
-                        name: series.title,
-                        image: series.poster,
-                        info: infoText
-                    };
+                    const seriesObj = { name: series.title, image: series.poster, info: infoText };
 
-                    let seasons = {};
-                    let defaultSeasonName = "รายการตอนทั้งหมด";
-
+                    let seasons = {}; let defaultSeasonName = "รายการตอนทั้งหมด";
                     series.episodes.forEach((ep) => {
                         if (!ep.isDead) {
                             let seasonName = defaultSeasonName;
                             const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
                             if (ssMatch) seasonName = `Season ${ssMatch[1]}`;
-
                             if (!seasons[seasonName]) seasons[seasonName] = [];
                             seasons[seasonName].push(ep);
                         }
@@ -609,84 +714,54 @@
                             seriesObj.groups = [];
                             seasonKeys.forEach(sName => {
                                 const seasonEps = seasons[sName];
-                                
                                 let currentSeasonTags = series.tags ? series.tags.filter(t => t.type !== 'season').map(t => t.text) : [];
-                                if (sName !== defaultSeasonName) {
-                                    currentSeasonTags.unshift(sName);
-                                }
+                                if (sName !== defaultSeasonName) currentSeasonTags.unshift(sName);
                                 const specificTagString = currentSeasonTags.join(' | ');
-
                                 const seasonInfoText = specificTagString ? `${specificTagString} | EP 1 - ${seasonEps.length} จบ` : `EP 1 - ${seasonEps.length} จบ`;
                                 
                                 const stations = seasonEps.map(ep => {
                                     let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
                                     if(!cleanEpTitle) cleanEpTitle = ep.title; 
                                     return {
-                                        name: cleanEpTitle,
-                                        image: series.poster,
-                                        url: ep.url,
-                                        info: seasonInfoText,
-                                        playInNatPlayer: "true",
-                                        userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+                                        name: cleanEpTitle, image: series.poster, url: ep.url, info: seasonInfoText,
+                                        playInNatPlayer: "true", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
                                     };
                                 });
-
-                                seriesObj.groups.push({
-                                    name: sName,
-                                    image: series.poster,
-                                    info: seasonInfoText,
-                                    stations: stations
-                                });
+                                seriesObj.groups.push({ name: sName, image: series.poster, info: seasonInfoText, stations: stations });
                             });
                         } else {
                             const seasonEps = seasons[seasonKeys[0]];
                             const stations = seasonEps.map(ep => ({
-                                name: ep.title,
-                                image: series.poster,
-                                url: ep.url,
-                                info: infoText,
-                                playInNatPlayer: "true",
-                                userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+                                name: ep.title, image: series.poster, url: ep.url, info: infoText,
+                                playInNatPlayer: "true", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
                             }));
                             seriesObj.stations = stations;
                         }
                         categoryGroup.groups.push(seriesObj);
                     }
                 });
-
-                if (categoryGroup.groups.length > 0) {
-                    exportData.groups.push(categoryGroup);
-                }
+                if (categoryGroup.groups.length > 0) exportData.groups.push(categoryGroup);
             }
 
-            const dataStr = JSON.stringify(exportData, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url;
             a.download = `kubhd24-iptv-${new Date().toISOString().slice(0,10)}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast("ส่งออก IPTV JSON (แยก Season ละเอียด) แล้ว!", "success");
-            appendLog(`[SYSTEM] 📤 ส่งออกข้อมูล IPTV JSON แบบแบ่งหมวดหมู่ซีซันละเอียดสำเร็จ`, 'text-emerald-400');
+            showToast("ส่งออก IPTV JSON สำเร็จ", "success");
         }
 
         function backupDatabase() {
             if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้สำรอง", "error"); return; }
-            
-            const backupData = gatheredSeries.map(series => ({
-                ...series,
-                image: series.poster 
-            }));
-
-            const dataStr = JSON.stringify(backupData, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
+            const backupData = gatheredSeries.map(series => ({ ...series, image: series.poster }));
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url;
             a.download = `harvester-backup-${new Date().toISOString().slice(0,10)}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
             showToast("สำรองฐานข้อมูลดิบสำเร็จ!", "success");
-            appendLog(`[SYSTEM] 💾 สำรองฐานข้อมูลพร้อมลิงก์รูปภาพ เก็บไว้ในเครื่องสำเร็จ`, 'text-blue-400');
         }
 
         function importJSON(event) {
@@ -701,25 +776,18 @@
                         let newAdded = 0, updated = 0;
                         data.forEach(importedItem => {
                             if (!importedItem || !importedItem.id || !Array.isArray(importedItem.episodes)) return;
-                            
-                            if (importedItem.image && !importedItem.poster) {
-                                importedItem.poster = importedItem.image;
-                            }
-
+                            if (importedItem.image && !importedItem.poster) importedItem.poster = importedItem.image;
                             const existingIdx = gatheredSeries.findIndex(s => s.id === importedItem.id);
-                            if (existingIdx === -1) {
-                                gatheredSeries.push(importedItem); newAdded++;
-                            } else if (importedItem.episodes.length > gatheredSeries[existingIdx].episodes.length) {
+                            if (existingIdx === -1) { gatheredSeries.push(importedItem); newAdded++; } 
+                            else if (importedItem.episodes.length > gatheredSeries[existingIdx].episodes.length) {
                                 gatheredSeries[existingIdx] = importedItem; updated++;
                             }
                         });
                         await saveToStorage();
-                        refreshOutput();
-                        showToast(`กู้คืนข้อมูลสำเร็จ! เพิ่ม ${newAdded} และ อัปเดต ${updated} เรื่อง`, "success");
+                        filterAndRender();
+                        showToast(`กู้คืนสำเร็จ! เพิ่ม ${newAdded} อัปเดต ${updated} เรื่อง`, "success");
                         appendLog(`📥 กู้คืน JSON: เพิ่มใหม่ ${newAdded} เรื่อง, อัปเดต ${updated} เรื่อง`, "text-emerald-400");
-                    } else {
-                        showToast("กรุณาใช้ไฟล์ Backup (ไม่ใช่ไฟล์ IPTV)", "error");
-                    }
+                    } else showToast("กรุณาใช้ไฟล์ Backup (ไม่ใช่ไฟล์ IPTV)", "error");
                 } catch (err) { showToast("ไฟล์ JSON ไม่ถูกต้อง หรือพัง!", "error"); }
                 event.target.value = ''; 
             };
@@ -732,8 +800,10 @@
                 if (saved && saved.length > 0) {
                     gatheredSeries = saved;
                     appendLog(`[SYSTEM] 💾 กู้คืนข้อมูลเซสชันล่าสุด ${gatheredSeries.length} เรื่องจาก IndexedDB`, 'text-emerald-400');
-                    refreshOutput();
+                    filterAndRender(); // ใช้ Pagination Render ตอนเปิดแอป
                     showToast('โหลดฐานข้อมูลสำเร็จ', 'info');
+                } else {
+                    updateGlobalActionsUI();
                 }
             } catch (e) { console.warn('Failed to parse localForage data'); }
         });
@@ -769,7 +839,6 @@
         function autoFormatEpisodes(episodes) {
             if (!episodes || episodes.length <= 1) return episodes;
             const hasExplicitSeason = episodes.some(ep => /(?:SS|Season|ภาค)[\s\.\-]*\d+/i.test(ep.title));
-            
             let ascCount = 0; let descCount = 0; let prevNum = -1;
             for (let ep of episodes) {
                 const num = getEpNum(ep.title);
@@ -778,12 +847,7 @@
                     prevNum = num;
                 }
             }
-            
-            // FIX 2: ป้องกันการ Mutate Array ต้นฉบับ ด้วยการสร้าง Array ใหม่ก่อน reverse
-            if (descCount > ascCount) {
-                episodes = [...episodes].reverse();
-            }
-
+            if (descCount > ascCount) episodes = [...episodes].reverse();
             if (hasExplicitSeason) return episodes;
 
             let needsAutoSeason = false; let lastNum = -1;
@@ -813,12 +877,8 @@
             if (/พากย์ไทย/i.test(clean)) tags.push({ text: 'พากย์ไทย', type: 'dub' });
             if (/ซับไทย|บรรยายไทย/i.test(clean)) tags.push({ text: 'ซับไทย', type: 'sub' });
             clean = clean.replace(/พากย์ไทย\+ซับไทย|พากย์ไทย|ซับไทย|บรรยายไทย/gi, '');
-
             const ssMatch = clean.match(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
-            if (ssMatch) {
-                tags.push({ text: `Season ${ssMatch[1]}`, type: 'season' });
-                clean = clean.replace(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/gi, '');
-            }
+            if (ssMatch) { tags.push({ text: `Season ${ssMatch[1]}`, type: 'season' }); clean = clean.replace(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/gi, ''); }
             clean = clean.replace(/[\(\)\[\]\-]/g, ' ').replace(/\s+/g, ' ').trim();
             if (!clean) clean = rawTitle;
             return { cleanTitle: clean, tags: tags, originalTitle: rawTitle };
@@ -834,13 +894,9 @@
 
             for (let i = 0; i < retries; i++) {
                 if (isStopped) return null;
-                
                 const controller = new AbortController();
                 activeControllers.add(controller);
-                
-                const timeoutId = setTimeout(() => {
-                    controller.abort();
-                }, 10000);
+                const timeoutId = setTimeout(() => { controller.abort(); }, 10000);
                 
                 try {
                     const res = await fetch(fetchUrl, { signal: controller.signal });
@@ -851,19 +907,11 @@
                     if (isStopped) return null;
                     const isTimeout = e.name === 'AbortError';
                     const errMsg = isTimeout ? 'Server Timeout' : e.message;
-                    if (i === retries - 1) {
-                        appendLog(`❌ ล้มเหลว (รอบ ${retries}): ${errMsg}`, 'text-rose-500');
-                        // FIX 3: แจ้งเตือนผู้ใช้หากไม่ได้ตั้งค่า Proxy ในกรณีรัน Local
-                        if(errMsg.includes('Failed to fetch') && !proxyInput) {
-                            appendLog(`⚠️ สาเหตุอาจเกิดจาก CORS กรุณาตั้งค่า Proxy`, 'text-amber-500');
-                        }
-                        return null;
-                    }
+                    if (i === retries - 1) { appendLog(`❌ ล้มเหลว (รอบ ${retries}): ${errMsg}`, 'text-rose-500'); return null; }
                     appendLog(`⚠️ ขัดข้อง (${errMsg}) ลองใหม่รอบ ${i+2}/${retries}...`, 'text-amber-500');
                     await sleep(2000);
                 } finally {
-                    clearTimeout(timeoutId); 
-                    activeControllers.delete(controller);
+                    clearTimeout(timeoutId); activeControllers.delete(controller);
                 }
             }
             return null;
@@ -875,18 +923,15 @@
                 if (isStopped) break;
                 const chunk = Array.from(buttons).slice(i, i + limit);
                 appendLog(`⏳ ดึงลิงก์แบบขนานตอนที่ ${i+1} ถึง ${Math.min(i+limit, buttons.length)}...`, 'text-indigo-400');
-                
                 const promises = chunk.map(async (btn) => {
                     await sleep(Math.random() * 500);
                     const url = await getStream(btn.id);
                     if (url) {
                         triggerSound('tick');
-                        const cleanEpTitle = btn.textContent.trim().replace(/[\r\n\s]+/g, " ");
-                        return { title: cleanEpTitle, url, isDead: false };
+                        return { title: btn.textContent.trim().replace(/[\r\n\s]+/g, " "), url, isDead: false };
                     }
                     return null;
                 });
-                
                 const results = await Promise.all(promises);
                 episodes.push(...results.filter(r => r !== null));
                 if (i + limit < buttons.length) await sleep(500); 
@@ -907,111 +952,84 @@
             if (!html || html === "404_NOT_FOUND") return null;
             const doc = new DOMParser().parseFromString(html, "text/html");
             const rawTitle = doc.querySelector("h1")?.textContent.trim() || id;
-            let poster = doc.querySelector("img.wp-post-image")?.getAttribute("data-src") || 
-                         doc.querySelector("img.wp-post-image")?.src || 
-                         'https://placehold.co/300x450/1e293b/fbbf24?text=' + encodeURIComponent(rawTitle);
-
+            let poster = doc.querySelector("img.wp-post-image")?.getAttribute("data-src") || doc.querySelector("img.wp-post-image")?.src || 'https://placehold.co/300x450/1e293b/fbbf24?text=' + encodeURIComponent(rawTitle);
             const epButtons = doc.querySelectorAll("#eplist button.ep");
             appendLog(`พบ ${epButtons.length} ตอน สำหรับเรื่อง "${rawTitle}"`, 'text-blue-300');
             
             const concurrencyLimit = parseInt(document.getElementById('speedSelect').value) || 5;
             let episodes = await processEpisodesConcurrently(epButtons, concurrencyLimit);
-            
             if (isStopped) return null;
             episodes = autoFormatEpisodes(episodes);
             const { cleanTitle, tags } = extractSeriesInfo(rawTitle);
+            return { id, title: rawTitle, cleanTitle, tags, poster, episodes, pageNum, categoryText };
+        }
+
+        function setScanningState(isActive) {
+            document.getElementById('btnStart').disabled = isActive;
+            document.getElementById('btnSync').disabled = isActive;
+            document.getElementById('btnStop').disabled = !isActive;
+            document.getElementById('speedSelect').disabled = isActive;
+            document.getElementById('proxyInput').disabled = isActive;
+            document.getElementById('startPage').disabled = isActive;
+            document.getElementById('endPage').disabled = isActive;
+            document.querySelectorAll('.cat-checkbox, button[onclick^="adjustPage"], #btnClearCache, #btnVerify').forEach(el => el.disabled = isActive);
             
-            return { id, title: rawTitle, cleanTitle: cleanTitle, tags: tags, poster, episodes, pageNum, categoryText };
+            if(isActive) {
+                document.getElementById('statusDot').className = "w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse";
+            } else {
+                document.getElementById('statusDot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping";
+                document.getElementById('btnStart').className = "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold h-9 rounded-lg shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer";
+                document.getElementById('btnSync').className = "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold h-9 rounded-lg shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer";
+                document.getElementById('btnStop').className = "bg-slate-800 text-slate-500 font-bold h-9 rounded-lg flex items-center justify-center gap-1.5 cursor-not-allowed";
+                document.getElementById('btnStop').innerHTML = `<i class="fa-solid fa-circle-stop text-xs"></i> หยุด`;
+            }
         }
 
         async function startHarvesting() {
             if (activeHarvest) return;
-            
-            // Logic Check หน้าที่นี่แทนที่จะเช็กทุกครั้งที่พิมพ์ เพื่อไม่ให้ขัดจังหวะผู้ใช้
-            const startInput = document.getElementById("startPage");
-            const endInput = document.getElementById("endPage");
-            let startPage = parseInt(startInput.value);
-            let endPage = parseInt(endInput.value);
-            
+            const startInput = document.getElementById("startPage"); const endInput = document.getElementById("endPage");
+            let startPage = parseInt(startInput.value); let endPage = parseInt(endInput.value);
             if (isNaN(startPage) || startPage < 1) { startPage = 1; startInput.value = 1; }
             if (isNaN(endPage) || endPage < 1) { endPage = 1; endInput.value = 1; }
-            
-            if (startPage > endPage) {
-                endPage = startPage;
-                endInput.value = startPage;
-            }
-
+            if (startPage > endPage) { endPage = startPage; endInput.value = startPage; }
             getAudioContext(); 
 
             const checkboxes = document.querySelectorAll('#categoryCheckboxes input[type="checkbox"]:checked');
-            if (checkboxes.length === 0) {
-                showToast('กรุณาติ๊กเลือกหมวดหมู่อย่างน้อย 1 รายการ!', 'error');
-                return;
-            }
+            if (checkboxes.length === 0) { showToast('กรุณาติ๊กเลือกหมวดหมู่อย่างน้อย 1 รายการ!', 'error'); return; }
             const categories = Array.from(checkboxes).map(cb => ({ value: cb.value, text: cb.getAttribute('data-text') }));
             
-            activeHarvest = true;
-            isStopped = false;
-
-            document.getElementById('btnStart').disabled = true;
-            document.getElementById('btnStop').disabled = false;
-            document.getElementById('speedSelect').disabled = true;
-            document.getElementById('proxyInput').disabled = true;
-            document.getElementById('startPage').disabled = true;
-            document.getElementById('endPage').disabled = true;
-            document.querySelectorAll('.cat-checkbox, button[onclick^="adjustPage"], #btnClearCache, #btnVerify').forEach(el => el.disabled = true);
+            activeHarvest = true; isStopped = false; setScanningState(true);
+            const loader = document.getElementById("loader"); const stats = document.getElementById("stats");
             
-            const loader = document.getElementById("loader");
-            const stats = document.getElementById("stats");
-            const statusDot = document.getElementById("statusDot");
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse";
-            
-            let totalSeriesFound = 0;
-            const totalPagesPerCat = endPage - startPage + 1;
-            const totalPagesToScan = totalPagesPerCat * categories.length;
-            let globalPageCounter = 0;
-
+            let totalSeriesFound = 0; let globalPageCounter = 0;
+            const totalPagesToScan = (endPage - startPage + 1) * categories.length;
             updateProgress(0, 'เตรียมระบบเชื่อมต่อคิว...');
 
             try {
                 for (let c = 0; c < categories.length; c++) {
                     if (isStopped) break;
-                    const category = categories[c].value;
-                    const categoryText = categories[c].text;
-                    
+                    const category = categories[c].value; const categoryText = categories[c].text;
                     appendLog(`[SYSTEM] 📂 เข้าสู่คิวหมวด: ${categoryText}...`, 'text-blue-400 font-bold');
                     
                     for (let p = startPage; p <= endPage; p++) {
-                        if (isStopped) break;
-                        globalPageCounter++;
-                        
+                        if (isStopped) break; globalPageCounter++;
                         const pageUrl = p === 1 ? `${BASE_CAT}${category}/` : `${BASE_CAT}${category}/page/${p}/`;
                         loader.textContent = `🔍 [${categoryText}] สแกนหน้า ${p}...`;
-                        appendLog(`เชื่อมต่อหน้า: ${pageUrl}`, 'text-slate-400');
                         
                         const catHtml = await requestWithRetry(pageUrl);
-                        
                         if (catHtml === "404_NOT_FOUND") {
                             updateProgress((globalPageCounter / totalPagesToScan) * 100, `ไม่พบหน้า ${p}`);
                             appendLog(`⚠️ ไม่พบหน้าเว็บ (404) - ข้ามหมวดหมู่นี้`, 'text-amber-500');
-                            globalPageCounter += (endPage - p); 
-                            break; 
+                            globalPageCounter += (endPage - p); break; 
                         }
-
-                        if (!catHtml) {
-                            updateProgress((globalPageCounter / totalPagesToScan) * 100, `ข้ามหน้า ${p}`);
-                            if(!isStopped) appendLog(`ข้ามหน้าเนื่องจากโหลดล้มเหลว`, 'text-amber-500');
-                            continue;
-                        }
+                        if (!catHtml) { updateProgress((globalPageCounter / totalPagesToScan) * 100, `ข้ามหน้า ${p}`); continue; }
 
                         const regex = /href="(?:https?:\/\/[^\/]+)?\/series\/([^"\/]+)\/?/g;
                         const ids = Array.from(new Set([...catHtml.matchAll(regex)])).map(m => m[1]).filter(i => i !== 'series');
-                        
                         if(ids.length === 0) {
                             updateProgress((globalPageCounter / totalPagesToScan) * 100, `ไม่พบข้อมูลในหน้า ${p}`);
                             appendLog(`⚠️ ไม่พบข้อมูลซีรีส์ (จบหมวดหมู่) ย้ายไปคิวถัดไป`, 'text-amber-500');
-                            globalPageCounter += (endPage - p); 
-                            break; 
+                            globalPageCounter += (endPage - p); break; 
                         }
 
                         totalSeriesFound += ids.length;
@@ -1019,13 +1037,9 @@
 
                         for (let i = 0; i < ids.length; i++) {
                             if (isStopped) break;
-                            const delay = Math.floor(Math.random() * 800) + 800; 
-                            await sleep(delay);
-                            
+                            await sleep(Math.floor(Math.random() * 800) + 800); 
                             loader.textContent = `⏳ [${categoryText}] หน้า ${p} | เรื่องที่ ${i+1}/${ids.length}`;
-                            const baseProgress = ((globalPageCounter - 1) / totalPagesToScan) * 100;
-                            const pageProgress = ((i + 1) / ids.length) * (100 / totalPagesToScan);
-                            updateProgress(baseProgress + pageProgress, `ดึงข้อมูล: ${ids[i]}`);
+                            updateProgress((((globalPageCounter - 1) / totalPagesToScan) * 100) + (((i + 1) / ids.length) * (100 / totalPagesToScan)), `ดึงข้อมูล: ${ids[i]}`);
                             appendLog(`[ดึงข้อมูล]: ${ids[i]}`, 'text-indigo-300');
                             
                             const data = await parseSeries(ids[i], p, categoryText);
@@ -1037,35 +1051,36 @@
                                     const existingSeries = gatheredSeries[existingIndex];
                                     if (data.episodes.length >= existingSeries.episodes.length) {
                                         let isNewEpisodes = data.episodes.length > existingSeries.episodes.length;
-                                        gatheredSeries[existingIndex] = data;
-                                        await saveToStorage();
                                         
-                                        const safeId = CSS.escape(data.id);
-                                        const oldCard = document.querySelector(`.card[data-id="${safeId}"]`);
-                                        
-                                        const tempContainer = document.createElement('div');
-                                        renderCard(data, p, tempContainer); 
-                                        
-                                        // FIX 4: ใช้ firstElementChild ป้องกันการดึง Whitespace Text Node มาทำงาน
-                                        if(oldCard && tempContainer.firstElementChild) {
-                                            oldCard.replaceWith(tempContainer.firstElementChild);
+                                        // BUGFIX: ถ้ามีตอนใหม่ ให้ย้ายเรื่องนี้ไปไว้ท้ายสุดของ Array (เพื่อให้ขึ้นหน้าแรกสุดเวลาเรียงแบบ 'ล่าสุด')
+                                        if (isNewEpisodes) {
+                                            gatheredSeries.splice(existingIndex, 1);
+                                            gatheredSeries.push(data);
                                         } else {
-                                            renderCard(data, p);
+                                            gatheredSeries[existingIndex] = data;
                                         }
                                         
-                                        filterResults(); 
+                                        await saveToStorage();
+                                        
+                                        // Update UI DOM specifically if it exists in current page view
+                                        const safeId = CSS.escape(data.id);
+                                        const oldCard = document.querySelector(`.card[data-id="${safeId}"]`);
+                                        if(oldCard) {
+                                            const tempContainer = document.createElement('div');
+                                            renderCard(data, p, tempContainer); 
+                                            if(tempContainer.firstElementChild) oldCard.replaceWith(tempContainer.firstElementChild);
+                                        }
+                                        
                                         if (isNewEpisodes) {
                                             showToast(`อัปเดตตอนใหม่ "${data.cleanTitle}" สำเร็จ!`, 'success');
                                             appendLog(`🔄 อัปเดตตอนใหม่: "${data.cleanTitle}"`, 'text-emerald-400');
-                                        } else {
-                                            appendLog(`🔄 อัปเดตลิงก์วิดีโอให้สดใหม่: "${data.cleanTitle}"`, 'text-blue-400');
-                                        }
+                                        } else { appendLog(`🔄 อัปเดตลิงก์ให้สดใหม่: "${data.cleanTitle}"`, 'text-blue-400'); }
                                     } else appendLog(`⏭️ "${data.cleanTitle}" ข้อมูลล่าสุดอยู่แล้ว`, 'text-slate-500');
                                 } else {
                                     gatheredSeries.push(data);
-                                    renderCard(data, p);
                                     await saveToStorage(); 
-                                    filterResults(); 
+                                    // หากอยู่หน้าแรก ก็อัปเดต Render ให้เห็นทันที
+                                    if(currentPage === 1 && document.getElementById('sortSelect').value === 'newest') filterAndRender(false);
                                     showToast(`ดึง "${data.cleanTitle}" สำเร็จ!`, 'success');
                                 }
                             }
@@ -1074,56 +1089,117 @@
                 }
             } catch (err) {
                 appendLog(`❌ เกิดข้อผิดพลาดร้ายแรงระหว่างสแกน: ${err.message}`, 'text-rose-500 font-bold');
-                showToast('พบข้อผิดพลาดร้ายแรง', 'error');
             } finally {
                 activeHarvest = false;
-                statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping";
                 const totalEps = gatheredSeries.reduce((sum, s) => sum + s.episodes.length, 0);
-                
                 if (isStopped) {
-                    updateProgress(0, 'ยกเลิกกระบวนการ');
-                    loader.textContent = `⏹ หยุดทำงานชั่วคราว`;
-                    stats.textContent = `รอคำสั่งใหม่จากผู้ใช้`;
+                    updateProgress(0, 'ยกเลิกกระบวนการ'); loader.textContent = `⏹ หยุดทำงานชั่วคราว`; stats.textContent = `รอคำสั่งใหม่จากผู้ใช้`;
                     appendLog(`⏹ ยกเลิกการทำงาน ข้อมูลปัจจุบัน ${gatheredSeries.length} เรื่อง รวม ${totalEps} ตอน`, 'text-rose-400');
                 } else {
-                    updateProgress(100, 'ประมวลผลเสร็จสิ้น');
-                    loader.textContent = `✅ สำเร็จเสร็จสิ้นทั้งหมด!`;
-                    stats.textContent = `ดึงข้อมูลครบทุกคิวแล้ว`;
+                    updateProgress(100, 'ประมวลผลเสร็จสิ้น'); loader.textContent = `✅ สำเร็จเสร็จสิ้นทั้งหมด!`; stats.textContent = `ดึงข้อมูลครบทุกคิวแล้ว`;
                     appendLog(`✅ สแกนสมบูรณ์ ฐานข้อมูลมี ${gatheredSeries.length} เรื่อง รวม ${totalEps} ตอน`, 'text-emerald-400 font-bold');
                     triggerSound('done');
                 }
-                updateGlobalActions();
-                resetControlsState();
+                filterAndRender(); // Re-render for safety
+                setScanningState(false);
+            }
+        }
+
+        // *** เปลี่ยนแปลง: เพิ่มฟังก์ชัน Smart Sync สำหรับอัปเดตข้อมูลที่มีอยู่เดิม ***
+        async function smartSync() {
+            if (activeHarvest) return;
+            if (gatheredSeries.length === 0) { showToast('ไม่พบข้อมูลในคลัง กรุณาสแกนครั้งแรกก่อน', 'error'); return; }
+            
+            const isConfirmed = await showConfirm(`ระบบจะทำการตรวจสอบตอนใหม่ของซีรีส์ทั้งหมดในคลัง (${gatheredSeries.length} เรื่อง) ต้องการเริ่มเลยหรือไม่?`);
+            if(!isConfirmed) return;
+
+            getAudioContext();
+            activeHarvest = true; isStopped = false; setScanningState(true);
+            const loader = document.getElementById("loader"); const stats = document.getElementById("stats");
+            
+            let updatedCount = 0;
+            appendLog(`[SYSTEM] 🔄 เริ่มกระบวนการ Smart Sync ค้นหาตอนใหม่...`, 'text-emerald-400 font-bold');
+
+            try {
+                // เพื่อความปลอดภัยของข้อมูล เราจะสร้าง Array ชุดเดิมมา Loop เพื่อให้ไม่กระทบ Index หากมีการเรียงข้อมูล
+                const seriesToSync = [...gatheredSeries];
+
+                for (let i = 0; i < seriesToSync.length; i++) {
+                    if (isStopped) break;
+                    let currentSeries = seriesToSync[i];
+                    
+                    loader.textContent = `🔄 กำลังซิงค์: ${currentSeries.cleanTitle || currentSeries.title}`;
+                    stats.textContent = `ตรวจสอบเรื่องที่ ${i+1}/${seriesToSync.length} (อัปเดตแล้ว ${updatedCount} เรื่อง)`;
+                    updateProgress((i / seriesToSync.length) * 100, `เช็กตอนใหม่: ${currentSeries.id}`);
+                    appendLog(`[เช็กอัปเดต]: ${currentSeries.title}`, 'text-slate-400');
+
+                    await sleep(Math.floor(Math.random() * 500) + 500); // หน่วงเวลาเบาๆ
+
+                    const data = await parseSeries(currentSeries.id, currentSeries.pageNum || 1, currentSeries.categoryText || 'N/A');
+                    
+                    if (isStopped) break;
+                    
+                    if (data && data.episodes.length > currentSeries.episodes.length) {
+                        const existingIndex = gatheredSeries.findIndex(s => s.id === currentSeries.id);
+                        if(existingIndex !== -1) {
+                            
+                            // BUGFIX: ย้ายเรื่องที่ Sync แล้วเจอตอนใหม่ ไปไว้ด้านบนสุดของการแสดงผล
+                            gatheredSeries.splice(existingIndex, 1);
+                            gatheredSeries.push(data);
+                            
+                            updatedCount++;
+                            await saveToStorage();
+                            
+                            // อัปเดต UI ถ้ามีการ์ดนั้นแสดงผลอยู่
+                            const safeId = CSS.escape(data.id);
+                            const oldCard = document.querySelector(`.card[data-id="${safeId}"]`);
+                            if(oldCard) {
+                                const tempContainer = document.createElement('div');
+                                renderCard(data, data.pageNum || 1, tempContainer); 
+                                if(tempContainer.firstElementChild) oldCard.replaceWith(tempContainer.firstElementChild);
+                            }
+
+                            showToast(`อัปเดต "${data.cleanTitle}" เป็น ${data.episodes.length} ตอน!`, 'success');
+                            appendLog(`⭐ อัปเดตสำเร็จ: ${data.cleanTitle} (รวม ${data.episodes.length} ตอน)`, 'text-amber-400 font-bold');
+                            triggerSound('success');
+                        }
+                    } else if (data && data.episodes.length === currentSeries.episodes.length) {
+                        // จำนวนตอนเท่าเดิม แต่ให้รีเฟรช URL เฉพาะกิจเพื่อลิงก์สดใหม่
+                        const existingIndex = gatheredSeries.findIndex(s => s.id === currentSeries.id);
+                        if(existingIndex !== -1) gatheredSeries[existingIndex] = data;
+                    }
+                }
+            } catch (err) {
+                appendLog(`❌ Sync Error: ${err.message}`, 'text-rose-500 font-bold');
+            } finally {
+                activeHarvest = false;
+                await saveToStorage(); // Save final state
+                
+                if (isStopped) {
+                    updateProgress(0, 'ยกเลิกกระบวนการซิงค์');
+                    appendLog(`⏹ ยกเลิก Smart Sync (อัปเดตไปแล้ว ${updatedCount} เรื่อง)`, 'text-rose-400');
+                } else {
+                    updateProgress(100, 'ซิงค์ข้อมูลเสร็จสิ้น');
+                    loader.textContent = `✅ Smart Sync เสร็จสิ้น!`;
+                    appendLog(`✅ สแกนตรวจสอบเสร็จสิ้น พบตอนใหม่จำนวน ${updatedCount} เรื่อง`, 'text-emerald-400 font-bold');
+                    triggerSound('done');
+                }
+                filterAndRender(false); // Re-render maintaining page if possible
+                setScanningState(false);
             }
         }
 
         async function verifyLinks() {
             if (gatheredSeries.length === 0) return;
             getAudioContext(); 
-            
             let allEps = [];
-            gatheredSeries.forEach(series => {
-                series.episodes.forEach(ep => { allEps.push({ series, ep }); });
-            });
-
-            if (allEps.length === 0) {
-                showToast('ไม่พบรายการตอนย่อยให้ตรวจสอบ', 'error');
-                return;
-            }
+            gatheredSeries.forEach(series => { series.episodes.forEach(ep => { allEps.push({ series, ep }); }); });
+            if (allEps.length === 0) { showToast('ไม่พบรายการตอนย่อยให้ตรวจสอบ', 'error'); return; }
 
             const isConfirmed = await showConfirm('การสแกนเช็กลิงก์เสียทั้งหมด อาจใช้เวลาสักพัก ขึ้นอยู่กับจำนวนตอนทั้งหมด ต้องการเริ่มหรือไม่?');
             if (!isConfirmed) return;
             
-            activeHarvest = true; isStopped = false;
-            
-            document.getElementById('btnStart').disabled = true;
-            document.getElementById('btnStop').disabled = false;
-            document.getElementById('speedSelect').disabled = true;
-            document.getElementById('proxyInput').disabled = true;
-            document.getElementById('startPage').disabled = true;
-            document.getElementById('endPage').disabled = true;
-            document.querySelectorAll('.cat-checkbox, #btnClearCache, #btnVerify').forEach(el => el.disabled = true);
-            
+            activeHarvest = true; isStopped = false; setScanningState(true);
             appendLog(`[SYSTEM] 🏥 เริ่มตรวจสอบสุขภาพลิงก์ทั้งหมด...`, 'text-indigo-400 font-bold');
             
             let checked = 0; let deadCount = 0;
@@ -1132,32 +1208,21 @@
             for (let i = 0; i < allEps.length; i += limit) {
                 if (isStopped) break;
                 const chunk = allEps.slice(i, i + limit);
-                
                 await Promise.all(chunk.map(async (item) => {
                     if (isStopped) return; 
-                    
-                    const controller = new AbortController();
-                    activeControllers.add(controller);
+                    const controller = new AbortController(); activeControllers.add(controller);
                     let timeoutId;
-                    
                     try {
                         const proxyInput = document.getElementById('proxyInput').value.trim();
                         const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(getSafeUrl(item.ep.url))) : getSafeUrl(item.ep.url);
-                        
-                        timeoutId = setTimeout(() => {
-                            controller.abort();
-                        }, 8000); 
-                        
+                        timeoutId = setTimeout(() => { controller.abort(); }, 8000); 
                         const checkRes = await fetch(fetchUrl, { method: 'GET', signal: controller.signal });
                         if (!checkRes.ok && checkRes.status !== 405) { item.ep.isDead = true; deadCount++; } 
                         else { item.ep.isDead = false; }
                     } catch (e) {
-                        if (e.name !== 'AbortError' || !isStopped) {
-                            item.ep.isDead = true; deadCount++;
-                        }
+                        if (e.name !== 'AbortError' || !isStopped) { item.ep.isDead = true; deadCount++; }
                     } finally {
-                        clearTimeout(timeoutId); 
-                        activeControllers.delete(controller);
+                        clearTimeout(timeoutId); activeControllers.delete(controller);
                     }
                     checked++;
                 }));
@@ -1165,8 +1230,7 @@
             }
             
             activeHarvest = false;
-            await saveToStorage();
-            refreshOutput();
+            await saveToStorage(); filterAndRender();
             
             if (isStopped) appendLog(`⏹ ยกเลิกการตรวจสอบกลางคัน`, 'text-rose-400');
             else {
@@ -1174,66 +1238,17 @@
                 showToast(`ตรวจสอบเสร็จสิ้น พบลิงก์เสีย ${deadCount} รายการ`, 'info');
                 triggerSound('done');
             }
-            resetControlsState();
-            updateProgress(0, 'แสตนบาย');
+            setScanningState(false); updateProgress(0, 'แสตนบาย');
         }
 
         function stopHarvesting() {
             if (!activeHarvest) return;
             isStopped = true;
             appendLog(`[SYSTEM] กำลังส่งคำสั่งหยุดการทำงานและตัดการเชื่อมต่อ...`, 'text-rose-500');
-            
             activeControllers.forEach(controller => controller.abort());
             activeControllers.clear();
-            
             document.getElementById('btnStop').disabled = true;
             document.getElementById('btnStop').textContent = "กำลังหยุด...";
-        }
-
-        function resetControlsState() {
-            document.getElementById('btnStart').disabled = false;
-            document.getElementById('btnStart').className = "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold h-9 rounded-lg shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer";
-            document.getElementById('btnStop').disabled = true;
-            document.getElementById('btnStop').className = "bg-slate-800 text-slate-500 font-bold h-9 rounded-lg flex items-center justify-center gap-1.5 cursor-not-allowed";
-            document.getElementById('btnStop').innerHTML = `<i class="fa-solid fa-circle-stop text-xs"></i> หยุด`;
-            
-            document.getElementById('speedSelect').disabled = false;
-            document.getElementById('proxyInput').disabled = false;
-            document.getElementById('startPage').disabled = false;
-            document.getElementById('endPage').disabled = false;
-            document.querySelectorAll('.cat-checkbox, button[onclick^="adjustPage"], #btnClearCache, #btnVerify').forEach(el => el.disabled = false);
-        }
-
-        function updateGlobalActions() {
-            const container = document.getElementById('globalActions');
-            const emptyState = document.getElementById('emptyState');
-            const countBadge = document.getElementById('countBadge');
-            
-            countBadge.textContent = `${gatheredSeries.length} เรื่อง`;
-            
-            const term = document.getElementById('searchInput').value.toLowerCase();
-            let visibleCount = 0;
-            if (term) {
-                visibleCount = Array.from(document.querySelectorAll('#output > .card:not(.hidden)')).length;
-            } else {
-                visibleCount = gatheredSeries.length;
-            }
-
-            if (gatheredSeries.length > 0) {
-                container.classList.remove('hidden'); 
-            } else {
-                container.classList.add('hidden'); 
-            }
-            
-            if (visibleCount === 0 && gatheredSeries.length > 0) {
-                emptyState.classList.remove('hidden');
-                emptyState.innerHTML = `<i class="fa-solid fa-magnifying-glass text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ไม่พบซีรีส์ที่ค้นหา</h3><p class="text-sm text-slate-600 mt-1">ลองใช้คีย์เวิร์ดอื่น</p>`;
-            } else if (visibleCount === 0) {
-                emptyState.classList.remove('hidden');
-                emptyState.innerHTML = `<i class="fa-solid fa-layer-group text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลที่จะแสดงผล</h3><p class="text-sm text-slate-600 max-w-sm mx-auto mt-1">ตั้งค่าช่วงหน้าเว็บและคลิกปุ่มสแกนข้อมูลด้านบนเพื่อรับรายการคอนเทนต์</p>`;
-            } else {
-                emptyState.classList.add('hidden');
-            }
         }
 
         function renderCard(data, pageNum, targetContainer = null) {
@@ -1251,17 +1266,10 @@
                     activeEpsCount++;
                 }
             });
-            if (activeEpsCount === 0 && data.episodes.length > 0) {
-                m3u += `# ไม่มีลิงก์ที่สามารถใช้งานได้ (ลิงก์เสียทั้งหมด)\n`;
-            }
+            if (activeEpsCount === 0 && data.episodes.length > 0) m3u += `# ไม่มีลิงก์ที่สามารถใช้งานได้ (ลิงก์เสียทั้งหมด)\n`;
 
             const card = document.createElement("div");
             card.className = "card bg-slate-800 rounded-2xl overflow-hidden border border-slate-700/60 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/50 flex flex-col group relative";
-            
-            const tagString = data.tags ? data.tags.map(t => t.text).join(' ') : '';
-            const searchKeywords = `${data.title} ${data.cleanTitle} ${tagString}`.toLowerCase();
-            card.setAttribute('data-title', data.title.toLowerCase());
-            card.setAttribute('data-search', searchKeywords);
             card.setAttribute('data-id', data.id); 
             
             let groups = {}; let currentGroupName = "รายการตอนทั้งหมด";
@@ -1272,22 +1280,21 @@
                 groups[currentGroupName].push(ep);
             });
 
-            let optionsHtml = '';
-            const groupNames = Object.keys(groups);
+            let optionsHtml = ''; const groupNames = Object.keys(groups);
             if (groupNames.length > 1 || (groupNames.length === 1 && groupNames[0] !== "รายการตอนทั้งหมด")) {
                 groupNames.forEach(gName => {
                     optionsHtml += `<optgroup label="📺 ${escapeHTML(gName)}">`;
                     groups[gName].forEach(ep => {
                         let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
                         if(!cleanEpTitle) cleanEpTitle = ep.title; 
-                        const deadMark = ep.isDead ? ' 💀 [ลิงก์เสีย]' : '';
+                        const deadMark = ep.isDead ? ' 💀 [เสีย]' : '';
                         optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(cleanEpTitle)}${deadMark}</option>`;
                     });
                     optionsHtml += `</optgroup>`;
                 });
             } else {
                 data.episodes.forEach(ep => {
-                    const deadMark = ep.isDead ? ' 💀 [ลิงก์เสีย]' : '';
+                    const deadMark = ep.isDead ? ' 💀 [เสีย]' : '';
                     optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(ep.title)}${deadMark}</option>`;
                 });
             }
@@ -1306,7 +1313,7 @@
             const deadCount = data.episodes.filter(ep => ep.isDead).length;
             let deadBadge = '';
             if (deadCount > 0) {
-                deadBadge = `<span class="absolute top-3 right-3 bg-rose-600/90 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md backdrop-blur-sm animate-pulse z-10 border border-rose-400/50"><i class="fa-solid fa-triangle-exclamation"></i> เสีย ${deadCount}</span>`;
+                deadBadge = `<span class="absolute top-3 right-3 bg-rose-600/90 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md backdrop-blur-sm animate-pulse z-10 border border-rose-400/50" title="ลิงก์เสีย ${deadCount} ตอน"><i class="fa-solid fa-skull"></i> ${deadCount}</span>`;
             }
 
             const displayTitle = data.cleanTitle ? data.cleanTitle : data.title;
@@ -1322,11 +1329,7 @@
                 <div class="p-4 flex-grow flex flex-col justify-between">
                     <div>
                         <h4 class="font-bold text-slate-100 text-sm line-clamp-2 min-h-[40px] group-hover:text-amber-400 transition-colors" title="${escapeHTML(data.title)}">${escapedSafeTitle}</h4>
-                        
-                        <div class="flex flex-wrap gap-1.5 mt-1.5 mb-2 min-h-[22px]">
-                            ${tagsHtml}
-                        </div>
-
+                        <div class="flex flex-wrap gap-1.5 mt-1.5 mb-2 min-h-[22px]">${tagsHtml}</div>
                         <div class="mt-2">
                             <label class="block text-[10px] text-slate-400 mb-1 font-semibold uppercase">เลือกดูตอนย่อย:</label>
                             <div class="flex gap-1.5">
@@ -1339,7 +1342,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="mt-4 pt-3 border-t border-slate-700/50 flex flex-col gap-2">
                         <button onclick="toggleSingleM3U(this)" class="w-full text-xs font-semibold bg-slate-900 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg border border-slate-700 flex items-center justify-center gap-1.5 transition-colors">
                             <i class="fa-solid fa-code text-[11px]"></i> ดูสคริปต์ M3U Playlist
@@ -1356,19 +1358,6 @@
             
             if(targetContainer) targetContainer.appendChild(card);
             else document.getElementById("output").appendChild(card);
-            
-            updateGlobalActions();
-        }
-
-        function filterResults() {
-            const term = document.getElementById('searchInput').value.toLowerCase();
-            const cards = document.querySelectorAll('#output > .card');
-            cards.forEach(card => {
-                const searchStr = card.getAttribute('data-search') || card.getAttribute('data-title');
-                if (searchStr.includes(term)) { card.classList.remove('hidden'); } 
-                else { card.classList.add('hidden'); }
-            });
-            updateGlobalActions(); 
         }
 
         function toggleSingleM3U(btn) {
@@ -1380,9 +1369,7 @@
 
         function copySingleM3U(btn) {
             const textarea = btn.parentElement.nextElementSibling;
-            textarea.select();
-            document.execCommand('copy');
-            showToast("คัดลอก M3U แล้ว!", "success");
+            textarea.select(); document.execCommand('copy'); showToast("คัดลอก M3U แล้ว!", "success");
         }
 
         function compileMegaM3U() {
@@ -1390,8 +1377,7 @@
             gatheredSeries.forEach(series => {
                 const groupName = series.categoryText || "ซีรีส์ทั่วไป";
                 const safeTitle = series.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
-                const safeGroupName = groupName.replace(/["']/g, '');
-                const safePoster = series.poster.replace(/["']/g, '');
+                const safeGroupName = groupName.replace(/["']/g, ''); const safePoster = series.poster.replace(/["']/g, '');
                 series.episodes.forEach(ep => {
                     const safeEpTitle = ep.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
                     if (!ep.isDead) megaM3U += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
@@ -1402,54 +1388,42 @@
 
         function downloadAllM3U() {
             if (gatheredSeries.length === 0) return;
-            const content = compileMegaM3U();
-            const blob = new Blob([content], { type: 'audio/x-mpegurl;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url;
+            const blob = new Blob([compileMegaM3U()], { type: 'audio/x-mpegurl;charset=utf-8' });
+            const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
             a.download = `Harvester-M3U-${new Date().toISOString().slice(0,10)}.m3u`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
             showToast("ดาวน์โหลด M3U สำเร็จ!", "success");
         }
 
         function copyAllM3UToClipboard() {
             if (gatheredSeries.length === 0) return;
-            const content = compileMegaM3U();
-            const dummy = document.createElement("textarea");
-            document.body.appendChild(dummy); dummy.value = content; dummy.select(); document.execCommand('copy'); document.body.removeChild(dummy);
+            const dummy = document.createElement("textarea"); document.body.appendChild(dummy);
+            dummy.value = compileMegaM3U(); dummy.select(); document.execCommand('copy'); document.body.removeChild(dummy);
             showToast("คัดลอกไฟล์รวม M3U สำเร็จ!", "success");
         }
 
         let activeHls = null;
         function previewEpisode(id) {
-            const select = document.getElementById(`epSelect-${id}`);
-            if(!select) return;
-            const url = select.value;
-            const titleText = select.options[select.selectedIndex].text;
+            const select = document.getElementById(`epSelect-${id}`); if(!select) return;
+            const url = select.value; const titleText = select.options[select.selectedIndex].text;
             const seriesObj = gatheredSeries.find(s => s.id === id);
             const displayTitle = seriesObj ? (seriesObj.cleanTitle || seriesObj.title) : 'ทดลองเล่นวิดีโอ';
             
             document.getElementById('modalTitle').textContent = displayTitle;
             document.getElementById('modalSubtitle').textContent = `กำลังเปิดสตรีม: ${titleText}`;
             document.getElementById('modalStreamUrl').textContent = url;
-            document.getElementById('playerModal').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+            document.getElementById('playerModal').classList.remove('hidden'); document.body.style.overflow = 'hidden';
             
-            const video = document.getElementById('hlsPlayer');
-            const placeholder = document.getElementById('videoPlaceholder');
+            const video = document.getElementById('hlsPlayer'); const placeholder = document.getElementById('videoPlaceholder');
             video.classList.add('hidden'); placeholder.classList.remove('hidden');
 
-            if (activeHls) {
-                activeHls.destroy();
-                activeHls = null;
-            }
+            if (activeHls) { activeHls.destroy(); activeHls = null; }
 
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-                const hls = new Hls(); activeHls = hls;
-                hls.loadSource(url); hls.attachMedia(video);
+                const hls = new Hls(); activeHls = hls; hls.loadSource(url); hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
                     video.classList.remove('hidden'); placeholder.classList.add('hidden');
-                    video.play().catch(e => console.warn("HLS Play failed:", e));
+                    video.play().catch(e => console.warn("HLS Play failed"));
                 });
                 hls.on(Hls.Events.ERROR, function (event, data) {
                     if (data.fatal) {
@@ -1465,35 +1439,27 @@
                 };
                 video.onloadedmetadata = function() {
                     video.classList.remove('hidden'); placeholder.classList.add('hidden');
-                    video.play().catch(e => console.warn("Native Play failed:", e));
+                    video.play().catch(e => console.warn("Native Play failed"));
                 };
             }
         }
 
         function closePlayer() {
-            document.getElementById('playerModal').classList.add('hidden');
-            document.body.style.overflow = '';
-            const video = document.getElementById('hlsPlayer');
-            const placeholder = document.getElementById('videoPlaceholder');
-            video.pause(); 
-            video.src = ''; 
-            video.removeAttribute('src'); 
-            video.load(); 
+            document.getElementById('playerModal').classList.add('hidden'); document.body.style.overflow = '';
+            const video = document.getElementById('hlsPlayer'); const placeholder = document.getElementById('videoPlaceholder');
+            video.pause(); video.src = ''; video.removeAttribute('src'); video.load(); 
             placeholder.innerHTML = `<i class="fa-solid fa-compact-disc text-blue-500 text-5xl animate-spin mb-3"></i><p class="text-slate-400 text-sm">กำลังเชื่อมต่อสัญญาณสตรีมสด...</p>`;
             if (activeHls) { activeHls.destroy(); activeHls = null; }
         }
 
         function copyStreamUrl() {
-            const urlText = document.getElementById('modalStreamUrl').textContent;
-            if(!urlText) return;
+            const urlText = document.getElementById('modalStreamUrl').textContent; if(!urlText) return;
             const dummy = document.createElement("textarea"); document.body.appendChild(dummy);
             dummy.value = urlText; dummy.select(); document.execCommand('copy'); document.body.removeChild(dummy);
             showToast("คัดลอกลิงก์สตรีมสำเร็จ!", "success");
         }
 
-        window.onclick = function(event) {
-            if (event.target == document.getElementById('playerModal')) closePlayer();
-        }
+        window.onclick = function(event) { if (event.target == document.getElementById('playerModal')) closePlayer(); }
     </script>
 </body>
 </html>
