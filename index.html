@@ -82,7 +82,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-slate-700/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 6.2 Stable Build (Fixed)</span>
+                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 6.2.1 Stable Build (Regex Fixed)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-yellow-300 to-blue-500 mb-3">
                 SERIES HARVESTER PRO
@@ -840,8 +840,16 @@
             if (/พากย์ไทย/i.test(clean)) tags.push({ text: 'พากย์ไทย', type: 'dub' });
             if (/ซับไทย|บรรยายไทย/i.test(clean)) tags.push({ text: 'ซับไทย', type: 'sub' });
             clean = clean.replace(/พากย์ไทย\+ซับไทย|พากย์ไทย|ซับไทย|บรรยายไทย/gi, '');
-            const ssMatch = clean.match(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
-            if (ssMatch) { tags.push({ text: `Season ${ssMatch[1]}`, type: 'season' }); clean = clean.replace(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/gi, ''); }
+            
+            // Fix: Strict regex for 'ปี' to prevent grabbing years like 85, 90, 2024, 2567
+            const ssRegex = /(?:season|ss|ภาค)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)|(?:ปี)[\s\.\-]*([1-9]|[1-2][0-9]|30)(?!\d)/i;
+            const ssMatch = clean.match(ssRegex);
+            if (ssMatch) { 
+                const sNum = ssMatch[1] || ssMatch[2];
+                tags.push({ text: `Season ${sNum}`, type: 'season' }); 
+                clean = clean.replace(ssRegex, ''); 
+            }
+            
             clean = clean.replace(/[\(\)\[\]\-]/g, ' ').replace(/\s+/g, ' ').trim();
             if (!clean) clean = rawTitle;
             return { cleanTitle: clean, tags: tags, originalTitle: rawTitle };
