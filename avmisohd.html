@@ -465,7 +465,6 @@
             setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        // --- NEW: Improved Clipboard Helper ---
         function copyToClipboardRobust(text, successMsg = "คัดลอกสำเร็จ") {
             const fallbackCopy = () => {
                 const ta = document.createElement("textarea");
@@ -492,7 +491,6 @@
             }
         }
         
-        // --- NEW: Custom Confirm Modal ---
         function customConfirm(title, message, onConfirm) {
             const modal = document.getElementById('confirmModal');
             document.getElementById('confirmTitle').textContent = title;
@@ -650,7 +648,7 @@
         
         function getSafeUrl(url) { try { return encodeURI(decodeURI(url)); } catch(e) { return encodeURI(url); } }
 
-        // --- NEW: Verify M3U8 Real-time before accepting it ---
+        // --- FIXED: Advanced Verification without CORS Block & False Positives ---
         async function verifyStreamUrl(url) {
             if (!url || !url.startsWith('http')) return false;
             try {
@@ -659,26 +657,34 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 6000); 
                 
-                // ใช้ Range Header เพื่อโหลดเนื้อหามาแค่ 1000 bytes แรก (ประหยัดแบนด์วิดท์ และเช็คไวขึ้น)
+                // เอา Range ออกเพราะมันมักจะติดบล็อค CORS (OPTIONS Preflight) ในหลายๆ Proxy!
                 const res = await fetch(fetchUrl, {
                     method: 'GET',
-                    headers: { 'Range': 'bytes=0-1000' },
+                    headers: { 'Accept': '*/*' },
                     signal: controller.signal
                 });
                 
                 clearTimeout(timeoutId);
                 
-                if (!res.ok && res.status !== 206) {
-                    controller.abort();
+                if (!res.ok && res.status !== 200 && res.status !== 206) {
+                    return false;
+                }
+
+                // สกัดจับ (Trap): ถ้าเซิร์ฟเวอร์/Proxy ดันส่งหน้าเว็บเพจ Error ปกติหรือ SPA index.html กลับมา
+                const contentType = res.headers.get('content-type') || '';
+                if (contentType.toLowerCase().includes('text/html')) {
+                    return false; // แปลว่านี่ไม่ใช่ไฟล์วิดีโอ (เป็นหน้าเว็บหลอกว่าโหลดสำเร็จ)
+                }
+                
+                const text = await res.text();
+                
+                // ป้องกัน False Positive กรณี Proxy พังแล้วส่งหน้าเว็บ index ของเราเองกลับมา 
+                // (ซึ่งในหน้าเรามีคำว่า #EXTM3U อยู่ตรงโค้ดส่วนนี้แหละ เลยทำให้มันเข้าใจผิดว่าเจอ)
+                if (text.toLowerCase().includes('<!doctype html>') || text.toLowerCase().includes('<html')) {
                     return false;
                 }
                 
-                // อ่านเนื้อหา เพื่อเช็คว่าเป็นไฟล์วิดีโอจริงๆ หรือเป็นหน้า Error 404 แบบ HTML
-                const text = await res.text();
-                controller.abort(); 
-                
-                if (url.includes('.m3u8') || url.includes('vdohls.com') || url.includes('javzero')) {
-                    // มาตรฐาน M3U8 ต้องมีแท็ก #EXTM3U ถ้าไม่มีแสดงว่าเป็นหน้าเว็บหลอก/ถูกลบ
+                if (url.includes('.m3u8') || url.includes('vdohls') || url.includes('javzero')) {
                     return text.includes('#EXTM3U');
                 }
                 
@@ -729,7 +735,6 @@
 
         function unpackJS(code) {
             let unpacked = code;
-            // Robust unpacker loop to handle multi-packed JS
             for (let i = 0; i < 3; i++) {
                 let payload = unpacked.match(/return\s+p\s*\}?\s*\(\s*(['"])([\s\S]*?)\1\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(['"])([\s\S]*?)\5\.split\(['"]\|['"]\)/);
                 if (payload) {
@@ -747,7 +752,6 @@
                     }
                     unpacked = p;
                 } else {
-                    // Fallback to basic string parsing if regex didn't perfectly match structure
                     let argsStr = unpacked.match(/}\s*\((.*?)\)\s*\)$/);
                     if(argsStr) {
                         let strings = [], strRegex = /['"]([^'"]*)['"]/g, sm;
@@ -766,7 +770,6 @@
             return unpacked;
         }
 
-        // --- ENHANCED URL EXTRACTOR (NOW INCLUDES HEURISTIC BUILDER) ---
         function extractUrlsFromText(html) {
             let urls = [];
             let unescapedHtml = html;
@@ -812,7 +815,6 @@
             searchPatterns(html);
             if (html !== unescapedHtml) searchPatterns(unescapedHtml);
 
-            // Base64 Decoder
             let b64Matches = unescapedHtml.match(/[a-zA-Z0-9+\/=?_-]{20,}/g);
             if (b64Matches) {
                 b64Matches.forEach(b64 => {
@@ -827,7 +829,6 @@
                 });
             }
             
-            // Unpack packed JS and search
             let packedMatches = unescapedHtml.match(/eval\s*\(\s*function[\s\S]*?\)\s*\)/g);
             if (packedMatches) {
                 packedMatches.forEach(packed => {
@@ -836,7 +837,7 @@
                 });
             }
 
-            // --- HEURISTIC DICTIONARY BRUTE-FORCER ---
+            // --- IMPROVED: Expanded Subdomains for Heuristic Builder ---
             let fullDicts = unescapedHtml.match(/(['"])([\w\d|_-]*?)\1\.split\(['"]\|['"]\)/g);
             if (fullDicts) {
                 fullDicts.forEach(dict => {
@@ -846,11 +847,9 @@
                         let isTarget = words.includes('vdohls') || words.includes('video') || words.includes('m3u8');
                         if (isTarget || unescapedHtml.includes('vdohls')) {
                             let candidates = words.filter(w => w.length >= 10 && w.length <= 15 && /^[a-zA-Z0-9_-]+$/.test(w) && !/^(https|vdohls|media|video|sources|length|m3u8|mp4|cdn|www)$/i.test(w));
+                            const domains = ['media.vdohls.com', 'cdn3.vdohls.com', 'cdn4.vdohls.com', 'media.javzero.xyz', 's1.javzero.xyz', 'v.vdohls.com'];
                             candidates.forEach(id => {
-                                urls.push(`https://media.vdohls.com/${id}/video.m3u8`);
-                                urls.push(`https://cdn3.vdohls.com/${id}/video.m3u8`);
-                                urls.push(`https://cdn4.vdohls.com/${id}/video.m3u8`);
-                                urls.push(`https://media.javzero.xyz/${id}/video.m3u8`);
+                                domains.forEach(d => urls.push(`https://${d}/${id}/video.m3u8`));
                             });
                         }
                     }
@@ -867,7 +866,6 @@
             let embedIdMatch = url.match(/\/(?:embed|e|v)\/([a-zA-Z0-9_-]+)/i);
             let embedId = embedIdMatch ? embedIdMatch[1] : null;
 
-            // --- API / AJAX BYPASS ---
             if (embedIdMatch) {
                 let origin = new URL(url).origin;
                 let apiUrl = origin + '/api/source/' + embedId; 
@@ -906,12 +904,14 @@
                 } catch(e) {}
             }
 
-            // HTML Fetch Fallback
             const html = await requestWithRetry(url, 2, true); 
             if (!html || html === "404") {
                 if (embedId && embedId.length >= 10) {
                     appendLog(`[INFO] 🔓 เจาะทะลุด้วย Heuristic Engine (VdoHLS Build)`, 'text-fuchsia-400 font-semibold text-[10px]');
-                    return { urls: [`https://media.vdohls.com/${embedId}/video.m3u8`], type: 'video' };
+                    const fallbackUrls = [];
+                    const domains = ['media.vdohls.com', 'cdn3.vdohls.com', 'cdn4.vdohls.com', 'media.javzero.xyz', 's1.javzero.xyz', 'v.vdohls.com'];
+                    domains.forEach(d => fallbackUrls.push(`https://${d}/${embedId}/video.m3u8`));
+                    return { urls: fallbackUrls, type: 'video' };
                 }
                 return { urls: [], type: 'failed' };
             }
@@ -921,14 +921,11 @@
             
             // --- HEURISTIC EMBED ID BUILDER ---
             if (m3u8s.length === 0 && embedId && embedId.length >= 10 && (html.includes('javzero') || html.includes('vdohls'))) {
-                m3u8s.push(`https://media.vdohls.com/${embedId}/video.m3u8`);
-                m3u8s.push(`https://cdn3.vdohls.com/${embedId}/video.m3u8`);
-                m3u8s.push(`https://cdn4.vdohls.com/${embedId}/video.m3u8`);
-                m3u8s.push(`https://media.javzero.xyz/${embedId}/video.m3u8`);
+                const domains = ['media.vdohls.com', 'cdn3.vdohls.com', 'cdn4.vdohls.com', 'media.javzero.xyz', 's1.javzero.xyz', 'v.vdohls.com'];
+                domains.forEach(d => m3u8s.push(`https://${d}/${embedId}/video.m3u8`));
             }
 
             if (m3u8s.length > 0) {
-                // --- BUG FIX: VERIFY BEFORE ADDING ---
                 let validUrls = [];
                 const verifyPromises = m3u8s.map(async (u) => {
                     if (await verifyStreamUrl(u)) {
@@ -998,7 +995,6 @@
 
             return { urls: [url], type: 'embed_fallback' }; 
         }
-        // ---------------------------------
 
         async function parseVideoPage(item, categoryText) {
             const html = await requestWithRetry(item.url);
@@ -1162,7 +1158,6 @@
                         totalFound += items.length;
                         stats.textContent = `พบ ${totalFound} เรื่องในหมวด ${cat.text}`;
 
-                        // --- BUG FIX #1: ADDED TRY-CATCH INSIDE PROMISE.ALL MAP ---
                         for (let i = 0; i < items.length; i += concurrencyLimit) {
                             if (isStopped) break;
                             const chunk = items.slice(i, i + concurrencyLimit);
@@ -1274,7 +1269,6 @@
                  statusBadge = '<span class="absolute top-2 right-2 bg-amber-600 text-white text-[10px] px-2 py-1 rounded shadow"><i class="fa-solid fa-code"></i> Iframe</span>';
             }
 
-            // --- BUG FIX #2: onerror loop fix ---
             card.innerHTML = `
                 <div class="relative overflow-hidden aspect-video bg-black group">
                     <img src="${escapeHTML(data.poster)}" alt="Poster" onerror="this.onerror=null; this.src='https://placehold.co/600x400/1C1520/E11D48?text=NO+IMG'" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
@@ -1330,7 +1324,6 @@
             }
         }
 
-        // --- BUG FIX #3: Applying copyToClipboardRobust ---
         function copySingleM3U(btn) {
             const textareaValue = btn.parentElement.nextElementSibling.value;
             copyToClipboardRobust(textareaValue, "คัดลอกสคริปต์ 1 รายการสำเร็จ");
@@ -1455,7 +1448,6 @@
             if (activeHls) { activeHls.destroy(); activeHls = null; }
         }
 
-        // --- BUG FIX #3: Applying copyToClipboardRobust ---
         function copyStreamUrl() {
             const urlText = document.getElementById('modalStreamUrl').textContent; if(!urlText) return;
             copyToClipboardRobust(urlText, "คัดลอกลิงก์สำเร็จ");
