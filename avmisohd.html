@@ -80,7 +80,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-rose-900/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.4.0 (Deep Scrape M3U8)</span>
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.4.2 (Extreme M3U8 Decoder)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-500 to-purple-600 mb-3">
                 AV MISO HARVESTER PRO
@@ -593,6 +593,120 @@
             return null;
         }
 
+        // --- NEW: ADVANCED JS UNPACKER & EXTRACTOR ---
+        function unpackJS(code) {
+            try {
+                let argsStr = code.match(/}\s*\((.*?)\)\s*\)$/);
+                if(!argsStr) return code;
+                let args = argsStr[1];
+                
+                let strings = [];
+                let strRegex = /['"]([^'"]*)['"]/g;
+                let sm;
+                while ((sm = strRegex.exec(args)) !== null) strings.push(sm[1]);
+                
+                let numbers = [];
+                let numRegex = /,\s*(\d+)\s*/g;
+                let nm;
+                while ((nm = numRegex.exec(args)) !== null) numbers.push(parseInt(nm[1]));
+                
+                if(strings.length >= 2 && numbers.length >= 2) {
+                    let p = strings[0];
+                    let a = numbers[0];
+                    let c = numbers[1];
+                    let k = strings[1].split('|');
+                    
+                    let e = function(c) {
+                        return (c < a ? '' : e(parseInt(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36));
+                    };
+                    
+                    while(c--) {
+                        if(k[c]) {
+                            p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]);
+                        }
+                    }
+                    return p;
+                }
+            } catch(e) {}
+            return code;
+        }
+
+        function extractUrlsFromText(html) {
+            let urls = [];
+            
+            const cleanUrl = (u) => {
+                let cleaned = u.replace(/\\\//g, '/'); // แก้ไขกรณีลิงก์ติด JSON Escaped (เช่น \/)
+                if (cleaned.startsWith('//')) cleaned = 'https:' + cleaned;
+                return cleaned;
+            };
+
+            // ถอดรหัส Hex (\x) และ Unicode (\u) ที่มักใช้ซ่อนลิงก์
+            let unescapedHtml = html;
+            try {
+                unescapedHtml = html.replace(/\\x([0-9A-Fa-f]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16)))
+                                    .replace(/\\u([0-9A-Fa-f]{4})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16)));
+            } catch(e) {}
+
+            const searchPatterns = (text) => {
+                // 1. Standard & JSON Escaped (.m3u8)
+                let m3u8Match = text.match(/(https?:(?:\\\/\\\/|\/\/)[^"'\s<>]+?\.m3u8[^"'\s<>]*)/gi);
+                if (m3u8Match) urls.push(...m3u8Match.map(cleanUrl));
+                
+                // 2. Protocol relative
+                let relMatch = text.match(/((?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^"'\s<>]+?\.m3u8[^"'\s<>]*)/gi);
+                if (relMatch) urls.push(...relMatch.map(cleanUrl));
+
+                // 3. URL Encoded
+                let encodedMatch = text.match(/(https%3A%2F%2F[^"'\s<>]+?\.m3u8[^"'\s<>]*)/gi);
+                if (encodedMatch) urls.push(...encodedMatch.map(decodeURIComponent));
+
+                // 4. Target Specific domains (vdohls.com) even if extension is hidden
+                let specificMatch = text.match(/(https?:(?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]*vdohls\.com[^"'\s<>]*)/gi);
+                if(specificMatch) urls.push(...specificMatch.map(cleanUrl));
+            };
+
+            // ค้นหาทั้งในโค้ดดิบและโค้ดที่ถอด Hex แล้ว
+            searchPatterns(html);
+            if (html !== unescapedHtml) searchPatterns(unescapedHtml);
+
+            // 5. Base64 Decoder
+            let b64Matches = unescapedHtml.match(/aHR0c[a-zA-Z0-9+\/=?_-]+/g);
+            if (b64Matches) {
+                b64Matches.forEach(b64 => {
+                    try {
+                        let padded = b64.replace(/-/g, '+').replace(/_/g, '/');
+                        while (padded.length % 4 !== 0) padded += '=';
+                        let decoded = atob(padded);
+                        if (decoded.includes('.m3u8') || decoded.includes('vdohls.com')) urls.push(decoded);
+                    } catch(e) {}
+                });
+            }
+            
+            // 6. Unpack packed JS
+            let packedMatches = unescapedHtml.match(/eval\s*\(\s*function\s*\(p,a,c,k,e,d\).*?\)\s*\)/g);
+            if (packedMatches) {
+                packedMatches.forEach(packed => {
+                    let unpacked = unpackJS(packed);
+                    searchPatterns(unpacked);
+                    
+                    let b64 = unpacked.match(/aHR0c[a-zA-Z0-9+\/=?_-]+/g);
+                    if (b64) {
+                        b64.forEach(b => {
+                            try {
+                                let padded = b.replace(/-/g, '+').replace(/_/g, '/');
+                                while (padded.length % 4 !== 0) padded += '=';
+                                let decoded = atob(padded);
+                                if (decoded.includes('.m3u8') || decoded.includes('vdohls.com')) urls.push(decoded);
+                            } catch(e) {}
+                        });
+                    }
+                });
+            }
+            
+            return [...new Set(urls)];
+        }
+        // ---------------------------------
+
         // Parse individual Video Post using pre-fetched metadata from category page
         async function parseVideoPage(item, categoryText) {
             const html = await requestWithRetry(item.url);
@@ -641,20 +755,28 @@
                     // It's likely an iframe embed, let's try to deep scrape it
                     const embedHtml = await requestWithRetry(url);
                     if (embedHtml) {
-                        const embedM3u8Match = embedHtml.match(/(https?:\/\/[^"'\s]+\.m3u8[^"'\s]*)/i);
-                        const embedM3u8MatchRel = embedHtml.match(/(\/\/[^"'\s]+\.m3u8[^"'\s]*)/i);
-                        
-                        if (embedM3u8Match) {
-                            finalStreamUrls.push(embedM3u8Match[1]);
-                        } else if (embedM3u8MatchRel) {
-                            finalStreamUrls.push('https:' + embedM3u8MatchRel[1]);
+                        let extracted = extractUrlsFromText(embedHtml);
+                        if (extracted.length > 0) {
+                            finalStreamUrls.push(...extracted);
                         } else {
-                            // Sometimes the m3u8 is inside a packed script or json
-                            const fileMatch = embedHtml.match(/file\s*:\s*["']([^"'\s]+\.m3u8[^"'\s]*)["']/i);
-                            if (fileMatch) {
-                                 finalStreamUrls.push(fileMatch[1]);
+                            // Check for 2nd layer iframe (common in javzero)
+                            let innerIframeMatch = embedHtml.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+                            if (innerIframeMatch && !innerIframeMatch[1].includes('histats.com')) {
+                                let innerUrl = innerIframeMatch[1];
+                                if (innerUrl.startsWith('//')) innerUrl = 'https:' + innerUrl;
+                                const innerHtml = await requestWithRetry(innerUrl);
+                                if (innerHtml) {
+                                    let innerExtracted = extractUrlsFromText(innerHtml);
+                                    if (innerExtracted.length > 0) {
+                                        finalStreamUrls.push(...innerExtracted);
+                                    } else {
+                                        finalStreamUrls.push(innerUrl); // Keep deepest iframe
+                                    }
+                                } else {
+                                    finalStreamUrls.push(url); 
+                                }
                             } else {
-                                 finalStreamUrls.push(url); // Keep original iframe URL if not found
+                                finalStreamUrls.push(url); // Keep original iframe URL
                             }
                         }
                     } else {
