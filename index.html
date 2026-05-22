@@ -79,7 +79,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-slate-700/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 6.2 Stable Build</span>
+                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 6.2 Stable Build (Fixed)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-yellow-300 to-blue-500 mb-3">
                 SERIES HARVESTER PRO
@@ -212,6 +212,7 @@
                 </div>
             </div>
 
+            <!-- Terminal Logger -->
             <div class="glassmorphism rounded-2xl p-6 glow-gold flex flex-col h-full min-h-[300px]">
                 <div class="flex items-center justify-between mb-3 border-b border-slate-700/50 pb-3">
                     <div class="flex items-center gap-3">
@@ -226,6 +227,7 @@
             </div>
         </div>
 
+        <!-- Global Actions / Playlists Download Section -->
         <div id="globalActions" class="hidden mb-6 bg-gradient-to-r from-blue-900/40 via-purple-900/40 to-slate-900/40 rounded-2xl p-6 border border-blue-500/30">
             <div class="flex flex-col items-center justify-center gap-5">
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 border-b border-slate-700/50 pb-4 w-full text-center sm:text-left">
@@ -273,6 +275,7 @@
             </div>
         </div>
 
+        <!-- Filter and Search -->
         <div class="flex flex-col lg:flex-row items-center justify-between gap-4 mb-6 bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
             <h2 class="text-2xl font-black text-slate-100 flex items-center gap-3 w-full lg:w-auto">
                 <i class="fa-solid fa-compact-disc text-blue-500"></i> คลังซีรีส์ 
@@ -289,6 +292,7 @@
 
         <div id="output" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[400px] content-start"></div>
         
+        <!-- Pagination -->
         <div id="paginationContainer" class="hidden flex flex-col sm:flex-row items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 mt-8">
             <p class="text-sm text-slate-400 mb-4 sm:mb-0" id="pageInfoText">แสดงรายการ 1 - 24 จากทั้งหมด 0 รายการ</p>
             <div class="flex items-center gap-2">
@@ -309,6 +313,7 @@
         </div>
     </div>
 
+    <!-- Video Preview Stream Player Modal -->
     <div id="playerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 hidden transition-opacity duration-300">
         <div class="bg-slate-900 rounded-2xl border border-slate-800 max-w-4xl w-full overflow-hidden shadow-2xl relative">
             <div class="flex justify-between items-center p-4 border-b border-slate-800">
@@ -898,7 +903,7 @@
             const json = await requestWithRetry(`https://kubhd24.net/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`, true);
             if (!json || json === "404_NOT_FOUND" || !json.success || !json.player) return null;
             
-            // Safer Regex that matches both src and data-src seamlessly
+            // Matches both src and data-src seamlessly
             const match = json.player.match(/(?:data-)?src="([^"]+)"/);
             if (!match) return null;
             
@@ -984,7 +989,8 @@
                         if (!catHtml) { updateProgress((globalPageCounter / totalPagesToScan) * 100, `ข้ามหน้า ${p}`); continue; }
 
                         const regex = /href="(?:https?:\/\/[^\/]+)?\/series\/([^"\/]+)\/?/g;
-                        const ids = Array.from(new Set([...catHtml.matchAll(regex)])).map(m => m[1]).filter(i => i !== 'series');
+                        // แก้บั๊กสแกนเบิ้ลด้วยการกรองชุด ID ที่ไม่ซ้ำกันก่อนอย่างแม่นยำ
+                        const ids = Array.from(new Set([...catHtml.matchAll(regex)].map(m => m[1]))).filter(i => i !== 'series');
                         if(ids.length === 0) {
                             updateProgress((globalPageCounter / totalPagesToScan) * 100, `ไม่พบข้อมูลในหน้า ${p}`);
                             appendLog(`⚠️ ไม่พบข้อมูลซีรีส์ (จบหมวดหมู่) ย้ายไปคิวถัดไป`, 'text-amber-500');
@@ -1222,8 +1228,7 @@
 
             const card = document.createElement("div");
             card.className = "card bg-slate-800 rounded-2xl overflow-hidden border border-slate-700/60 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/50 flex flex-col group relative";
-            const safeIdAttr = data.id.replace(/["\\]/g, ''); // Safest for HTML ID
-            const safeQueryId = data.id.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            const safeIdAttr = data.id.replace(/["\\]/g, ''); // Safest HTML element id attribute
             card.setAttribute('data-id', data.id); 
             
             let groups = {}; let currentGroupName = "รายการตอนทั้งหมด";
