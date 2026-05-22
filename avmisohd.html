@@ -80,7 +80,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-rose-900/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.4.3 (UI Update)</span>
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.4.4 (Ultimate Recursive Deep Scraper)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-500 to-purple-600 mb-3">
                 AV MISO HARVESTER PRO
@@ -653,16 +653,16 @@
             } catch(e) {}
 
             const searchPatterns = (text) => {
-                // 1. Standard & JSON Escaped (.m3u8)
-                let m3u8Match = text.match(/(https?:(?:\\\/\\\/|\/\/)[^"'\s<>]+?\.m3u8[^"'\s<>]*)/gi);
+                // 1. Standard & JSON Escaped (.m3u8 or .mp4)
+                let m3u8Match = text.match(/(https?:(?:\\\/\\\/|\/\/)[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
                 if (m3u8Match) urls.push(...m3u8Match.map(cleanUrl));
                 
                 // 2. Protocol relative
-                let relMatch = text.match(/((?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^"'\s<>]+?\.m3u8[^"'\s<>]*)/gi);
+                let relMatch = text.match(/((?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
                 if (relMatch) urls.push(...relMatch.map(cleanUrl));
 
                 // 3. URL Encoded
-                let encodedMatch = text.match(/(https%3A%2F%2F[^"'\s<>]+?\.m3u8[^"'\s<>]*)/gi);
+                let encodedMatch = text.match(/(https%3A%2F%2F[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
                 if (encodedMatch) urls.push(...encodedMatch.map(decodeURIComponent));
 
                 // 4. Target Specific domains (vdohls.com) even if extension is hidden
@@ -682,7 +682,7 @@
                         let padded = b64.replace(/-/g, '+').replace(/_/g, '/');
                         while (padded.length % 4 !== 0) padded += '=';
                         let decoded = atob(padded);
-                        if (decoded.includes('.m3u8') || decoded.includes('vdohls.com')) urls.push(decoded);
+                        if (decoded.includes('.m3u8') || decoded.includes('.mp4') || decoded.includes('vdohls.com')) urls.push(decoded);
                     } catch(e) {}
                 });
             }
@@ -701,7 +701,7 @@
                                 let padded = b.replace(/-/g, '+').replace(/_/g, '/');
                                 while (padded.length % 4 !== 0) padded += '=';
                                 let decoded = atob(padded);
-                                if (decoded.includes('.m3u8') || decoded.includes('vdohls.com')) urls.push(decoded);
+                                if (decoded.includes('.m3u8') || decoded.includes('.mp4') || decoded.includes('vdohls.com')) urls.push(decoded);
                             } catch(e) {}
                         });
                     }
@@ -709,6 +709,74 @@
             }
             
             return [...new Set(urls)];
+        }
+
+        // --- NEW: RECURSIVE DEEP SCRAPER ---
+        async function recursiveDeepScrape(url, maxDepth, currentDepth = 0, visited = new Set()) {
+            if (currentDepth > maxDepth || visited.has(url)) return [url];
+            visited.add(url);
+            
+            const html = await requestWithRetry(url);
+            if (!html || html === "404") return [url];
+
+            // 1. Try to find M3U8/MP4 immediately
+            let extracted = extractUrlsFromText(html);
+            if (extracted.length > 0) return extracted;
+
+            let iframes = [];
+            
+            // 2. Extract standard iframes
+            let iframeMatch;
+            const iframeRegex = /<iframe[^>]+(?:data-)?src=["']([^"']+)["']/gi;
+            while ((iframeMatch = iframeRegex.exec(html)) !== null) {
+                let src = iframeMatch[1];
+                if (!src.includes('histats.com') && !src.includes('facebook.com') && !src.includes('twitter.com')) {
+                    iframes.push(src);
+                }
+            }
+
+            // 3. Brute-force guess embed domains (in case it's generated via JS and has no iframe tag)
+            let embedDomainMatch = html.match(/(https?:(?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]*(?:streamwish|senvid|filemoon|dood|jawcloud|vtube|uqload|javzero)[a-zA-Z0-9.\/_-]+)/gi);
+            if (embedDomainMatch) {
+                embedDomainMatch.forEach(u => {
+                    iframes.push(u.replace(/\\\//g, '/'));
+                });
+            }
+
+            // Clean up and process nested iframes
+            iframes = [...new Set(iframes)].filter(u => u !== url && !u.includes('avmisohd.to'));
+            
+            if (iframes.length > 0) {
+                let allDeepUrls = [];
+                for (let ifrSrc of iframes) {
+                    let fullUrl = ifrSrc;
+                    if (ifrSrc.startsWith('//')) fullUrl = 'https:' + ifrSrc;
+                    else if (ifrSrc.startsWith('/')) {
+                        try { fullUrl = new URL(ifrSrc, new URL(url).origin).href; } catch(e){}
+                    } else if (!ifrSrc.startsWith('http')) {
+                        try { fullUrl = new URL(ifrSrc, url).href; } catch(e){}
+                    }
+                    
+                    let deepUrls = await recursiveDeepScrape(fullUrl, maxDepth, currentDepth + 1, visited);
+                    allDeepUrls.push(...deepUrls);
+                }
+                if (allDeepUrls.length > 0) return [...new Set(allDeepUrls)];
+            }
+            
+            // 4. Handle JS Redirects (window.location.href)
+            let redirectMatch = html.match(/location(?:\.href)?\s*=\s*["']([^"']+)["']/i) || html.match(/replace\s*\(\s*["']([^"']+)["']\s*\)/i);
+            if (redirectMatch) {
+                let redirUrl = redirectMatch[1];
+                 if (redirUrl.startsWith('//')) redirUrl = 'https:' + redirUrl;
+                 else if (redirUrl.startsWith('/') || !redirUrl.startsWith('http')) {
+                     try { redirUrl = new URL(redirUrl, url).href; } catch(e){}
+                 }
+                 if (redirUrl && redirUrl.startsWith('http')) {
+                     return await recursiveDeepScrape(redirUrl, maxDepth, currentDepth + 1, visited);
+                 }
+            }
+
+            return [url]; // Return current URL if no deeper video found
         }
         // ---------------------------------
 
@@ -753,40 +821,14 @@
 
             streamUrls = [...new Set(streamUrls)];
 
-            // --- NEW: DEEP SCRAPE FOR NESTED M3U8 IN IFRAMES ---
+            // --- RECURSIVE DEEP SCRAPE ACTIVATION ---
             let finalStreamUrls = [];
             for (let url of streamUrls) {
                 if (!url.includes('.m3u8') && !url.includes('.mp4')) {
-                    // It's likely an iframe embed, let's try to deep scrape it
-                    const embedHtml = await requestWithRetry(url);
-                    if (embedHtml) {
-                        let extracted = extractUrlsFromText(embedHtml);
-                        if (extracted.length > 0) {
-                            finalStreamUrls.push(...extracted);
-                        } else {
-                            // Check for 2nd layer iframe (common in javzero)
-                            let innerIframeMatch = embedHtml.match(/<iframe[^>]+src=["']([^"']+)["']/i);
-                            if (innerIframeMatch && !innerIframeMatch[1].includes('histats.com')) {
-                                let innerUrl = innerIframeMatch[1];
-                                if (innerUrl.startsWith('//')) innerUrl = 'https:' + innerUrl;
-                                const innerHtml = await requestWithRetry(innerUrl);
-                                if (innerHtml) {
-                                    let innerExtracted = extractUrlsFromText(innerHtml);
-                                    if (innerExtracted.length > 0) {
-                                        finalStreamUrls.push(...innerExtracted);
-                                    } else {
-                                        finalStreamUrls.push(innerUrl); // Keep deepest iframe
-                                    }
-                                } else {
-                                    finalStreamUrls.push(url); 
-                                }
-                            } else {
-                                finalStreamUrls.push(url); // Keep original iframe URL
-                            }
-                        }
-                    } else {
-                        finalStreamUrls.push(url); // Keep original iframe URL on fetch error
-                    }
+                    // It's likely an iframe embed or dynamic script, use recursive scraper
+                    // Max depth = 3 to prevent infinite loops while catching nested streams
+                    let deepUrls = await recursiveDeepScrape(url, 3); 
+                    finalStreamUrls.push(...deepUrls);
                 } else {
                     finalStreamUrls.push(url); // Already a direct video link
                 }
