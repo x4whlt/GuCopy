@@ -562,6 +562,7 @@
                     const tagString = series.tags && series.tags.length > 0 
                                       ? series.tags.map(t => t.text).join(' | ') 
                                       : "";
+                    // infoText แบบรวมทั้งหมด (แสดงเฉพาะด้านนอกสุด)
                     const infoText = tagString ? `${tagString} | EP 1 - ${series.episodes.length} จบ` : `EP 1 - ${series.episodes.length} จบ`;
                     
                     const seriesObj = {
@@ -573,6 +574,7 @@
                     let seasons = {};
                     let defaultSeasonName = "รายการตอนทั้งหมด";
 
+                    // 1. จัดกลุ่มตอนเข้าด้วยกันตามซีซัน
                     series.episodes.forEach((ep) => {
                         if (!ep.isDead) {
                             let seasonName = defaultSeasonName;
@@ -581,42 +583,53 @@
                             if (ssMatch) seasonName = `Season ${ssMatch[1]}`;
 
                             if (!seasons[seasonName]) seasons[seasonName] = [];
-
-                            let cleanEpTitle = ep.title;
-                            if (seasonName !== defaultSeasonName) {
-                                // ถ้ามีการระบุ Season ให้ตัดคำว่า Season/SS ออกจากชื่อตอนย่อยเพื่อให้ดูสะอาดตา
-                                cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
-                                if(!cleanEpTitle) cleanEpTitle = ep.title; 
-                            }
-
-                            seasons[seasonName].push({
-                                name: cleanEpTitle,
-                                image: series.poster,
-                                url: ep.url,
-                                info: infoText,
-                                playInNatPlayer: "true",
-                                userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
-                            });
+                            seasons[seasonName].push(ep);
                         }
                     });
 
-                    // ตรวจสอบว่าต้องแตกแฟ้มย่อยสำหรับ Season หรือไม่
+                    // 2. จัดรูปแบบ JSON โดยคำนวณและแยก info ให้ตรงตามจำนวนตอนของแต่ละซีซัน
                     const seasonKeys = Object.keys(seasons);
                     if (seasonKeys.length > 0) {
                         if (seasonKeys.length > 1 || (seasonKeys.length === 1 && seasonKeys[0] !== defaultSeasonName)) {
                             // มีการแยกซีซัน ให้สร้าง groups ย่อยเข้าไปอีกชั้น
                             seriesObj.groups = [];
                             seasonKeys.forEach(sName => {
+                                const seasonEps = seasons[sName];
+                                // สร้าง infoText เฉพาะของซีซันนั้นๆ (นับแค่ตอนในซีซัน)
+                                const seasonInfoText = tagString ? `${tagString} | EP 1 - ${seasonEps.length} จบ` : `EP 1 - ${seasonEps.length} จบ`;
+                                
+                                const stations = seasonEps.map(ep => {
+                                    let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
+                                    if(!cleanEpTitle) cleanEpTitle = ep.title; 
+                                    return {
+                                        name: cleanEpTitle,
+                                        image: series.poster,
+                                        url: ep.url,
+                                        info: seasonInfoText, // ใช้ info เฉพาะของซีซันนั้นๆ
+                                        playInNatPlayer: "true",
+                                        userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+                                    };
+                                });
+
                                 seriesObj.groups.push({
                                     name: sName,
                                     image: series.poster,
-                                    info: infoText,
-                                    stations: seasons[sName]
+                                    info: seasonInfoText, // แสดงจำนวนตอนของซีซันที่แยกออกมาชัดเจน
+                                    stations: stations
                                 });
                             });
                         } else {
-                            // ถ้ามีแค่ซีซันเดียว (ไม่ระบุ SS) ให้ใส่ใน stations เลย ไม่ต้องซ้อนแฟ้ม
-                            seriesObj.stations = seasons[seasonKeys[0]];
+                            // ถ้ามีแค่ซีซันเดียว (ไม่ระบุ SS) ให้ใส่ใน stations เลย
+                            const seasonEps = seasons[seasonKeys[0]];
+                            const stations = seasonEps.map(ep => ({
+                                name: ep.title,
+                                image: series.poster,
+                                url: ep.url,
+                                info: infoText, // ใช้ info แบบรวม
+                                playInNatPlayer: "true",
+                                userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+                            }));
+                            seriesObj.stations = stations;
                         }
                         categoryGroup.groups.push(seriesObj);
                     }
@@ -634,8 +647,8 @@
             a.download = `kubhd24-iptv-${new Date().toISOString().slice(0,10)}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast("ส่งออก IPTV JSON (แยก Season) แล้ว!", "success");
-            appendLog(`[SYSTEM] 📤 ส่งออกข้อมูล IPTV JSON แบบแบ่งหมวดหมู่ย่อยสำเร็จ`, 'text-emerald-400');
+            showToast("ส่งออก IPTV JSON (แยก Season ละเอียด) แล้ว!", "success");
+            appendLog(`[SYSTEM] 📤 ส่งออกข้อมูล IPTV JSON แบบแบ่งหมวดหมู่ซีซันละเอียดสำเร็จ`, 'text-emerald-400');
         }
 
         function backupDatabase() {
