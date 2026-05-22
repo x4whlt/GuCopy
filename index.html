@@ -599,6 +599,9 @@
                     if (Array.isArray(data)) {
                         let newAdded = 0, updated = 0;
                         data.forEach(importedItem => {
+                            // ดักเช็คโครงสร้าง Object ป้องกันนำเข้าไฟล์มั่วจนเว็บพัง
+                            if (!importedItem || !importedItem.id || !Array.isArray(importedItem.episodes)) return;
+                            
                             const existingIdx = gatheredSeries.findIndex(s => s.id === importedItem.id);
                             if (existingIdx === -1) {
                                 gatheredSeries.push(importedItem); newAdded++;
@@ -610,6 +613,8 @@
                         refreshOutput();
                         showToast(`นำเข้าสำเร็จ! เพิ่ม ${newAdded} และ อัปเดต ${updated} เรื่อง`, "success");
                         appendLog(`📥 นำเข้า JSON: เพิ่มใหม่ ${newAdded} เรื่อง, อัปเดต ${updated} เรื่อง`, "text-emerald-400");
+                    } else {
+                        showToast("ไฟล์ JSON ไม่ถูกต้อง หรือพัง!", "error");
                     }
                 } catch (err) { showToast("ไฟล์ JSON ไม่ถูกต้อง หรือพัง!", "error"); }
                 event.target.value = ''; 
@@ -839,6 +844,18 @@
         // --- ระบบ Check Dead Links ---
         async function verifyLinks() {
             if (gatheredSeries.length === 0) return;
+            
+            let allEps = [];
+            gatheredSeries.forEach(series => {
+                series.episodes.forEach(ep => { allEps.push({ series, ep }); });
+            });
+
+            // ดักจับกรณีฐานข้อมูลมีเรื่อง แต่ตอนย่อยพัง (ป้องกันหลอดโหลดพังเป็น NaN)
+            if (allEps.length === 0) {
+                showToast('ไม่พบรายการตอนย่อยให้ตรวจสอบ', 'error');
+                return;
+            }
+
             if (!confirm('การสแกนเช็กลิงก์เสียทั้งหมด อาจใช้เวลาสักพัก ขึ้นอยู่กับจำนวนตอนทั้งหมด ต้องการเริ่มหรือไม่?')) return;
             
             activeHarvest = true; isStopped = false;
@@ -847,11 +864,6 @@
             document.querySelectorAll('.cat-checkbox, #btnClearCache, #btnVerify').forEach(el => el.disabled = true);
             
             appendLog(`[SYSTEM] 🏥 เริ่มตรวจสอบสุขภาพลิงก์ทั้งหมด...`, 'text-indigo-400 font-bold');
-            
-            let allEps = [];
-            gatheredSeries.forEach(series => {
-                series.episodes.forEach(ep => { allEps.push({ series, ep }); });
-            });
             
             let checked = 0; let deadCount = 0;
             const limit = parseInt(document.getElementById('speedSelect').value) || 5;
@@ -937,10 +949,19 @@
             const safeGroupName = groupName.replace(/"/g, "'");
             const safePoster = data.poster.replace(/"/g, "'");
 
+            let activeEpsCount = 0;
             data.episodes.forEach(ep => {
-                const safeEpTitle = ep.title.replace(/"/g, "'");
-                m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
+                // ซ่อนลิงก์เสียจากสคริปต์รายเรื่องด้วย เพื่อให้ตรงกับการ Export 
+                if (!ep.isDead) {
+                    const safeEpTitle = ep.title.replace(/"/g, "'");
+                    m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
+                    activeEpsCount++;
+                }
             });
+            // แจ้งเตือนใน M3U หากเรื่องนั้นลิงก์เสีย 100%
+            if (activeEpsCount === 0 && data.episodes.length > 0) {
+                m3u += `# ไม่มีลิงก์ที่สามารถใช้งานได้ (ลิงก์เสียทั้งหมด)\n`;
+            }
 
             const card = document.createElement("div");
             card.className = "card bg-slate-800 rounded-2xl overflow-hidden border border-slate-700/60 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/50 flex flex-col group relative";
@@ -1162,7 +1183,10 @@
             document.body.style.overflow = '';
             const video = document.getElementById('hlsPlayer');
             const placeholder = document.getElementById('videoPlaceholder');
-            video.pause(); video.removeAttribute('src'); video.load(); 
+            video.pause(); 
+            video.src = ''; 
+            video.removeAttribute('src'); 
+            video.load(); 
             placeholder.innerHTML = `<i class="fa-solid fa-compact-disc text-blue-500 text-5xl animate-spin mb-3"></i><p class="text-slate-400 text-sm">กำลังเชื่อมต่อสัญญาณสตรีมสด...</p>`;
             if (activeHls) { activeHls.destroy(); activeHls = null; }
         }
