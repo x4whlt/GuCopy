@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AV Miso Harvester Pro | M3U Generator</title>
+    <title>AV Miso Harvester Pro v1.5 | M3U8 Deep Extractor</title>
     
     <!-- Favicon Fix -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍑</text></svg>">
@@ -80,13 +80,13 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-rose-900/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.4.4 (Ultimate Recursive Deep Scraper)</span>
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.5 (Advanced HLS Extractor)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-500 to-purple-600 mb-3">
                 AV MISO HARVESTER PRO
             </h1>
             <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto font-light leading-relaxed">
-                ระบบดึงข้อมูลวิดีโอ <span class="text-rose-400 font-medium">AVMISOHD</span> อัตโนมัติ พร้อมส่งออก M3U
+                ระบบดึงข้อมูลวิดีโอ <span class="text-rose-400 font-medium">AVMISOHD</span> อัตโนมัติ พร้อมเจาะลึกหา M3U8 แบบเจาะทะลุ Iframe
                 <br class="hidden sm:block">รองรับ Proxy ทะลุบล็อคและระบบจัดการคลังเก็บข้อมูลส่วนตัว
             </p>
         </header>
@@ -248,7 +248,7 @@
                     <div class="md:col-span-6 flex flex-col justify-end">
                         <div class="grid grid-cols-2 gap-2">
                             <button id="btnStart" onclick="startHarvesting()" class="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold h-9 rounded-lg shadow-md flex items-center justify-center gap-1.5 transition-all">
-                                <i class="fa-solid fa-play text-xs"></i> เริ่มสแกน
+                                <i class="fa-solid fa-play text-xs"></i> เริ่มสแกนเจาะลึก
                             </button>
                             <button id="btnStop" onclick="stopHarvesting()" disabled class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-not-allowed border border-slate-700">
                                 <i class="fa-solid fa-circle-stop text-xs"></i> หยุด
@@ -288,6 +288,7 @@
                 </div>
                 <div id="terminal" class="w-full bg-[#0B080D] rounded-xl p-3 font-mono text-[11px] leading-relaxed overflow-y-auto h-[250px] lg:h-[400px] text-slate-300 border border-slate-800/50">
                     <div class="text-rose-400">[SYSTEM]: พร้อมทำงานกับ avmisohd.to ...</div>
+                    <div class="text-amber-400/80">[INFO]: โหมดเจาะลึก M3U8 เปิดใช้งานแล้ว</div>
                 </div>
             </div>
         </div>
@@ -359,7 +360,7 @@
         <div id="emptyState" class="text-center py-20 bg-[#0B080D]/50 rounded-3xl border-2 border-dashed border-rose-900/30">
             <i class="fa-solid fa-film text-slate-700 text-6xl mb-4"></i>
             <h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลวิดีโอ</h3>
-            <p class="text-sm text-slate-600 max-w-sm mx-auto mt-1">กดปุ่มเริ่มสแกนด้านบน เพื่อดึงข้อมูลจากเว็บไซต์</p>
+            <p class="text-sm text-slate-600 max-w-sm mx-auto mt-1">กดปุ่มเริ่มสแกนด้านบน เพื่อดึงข้อมูลและเจาะหาลิงก์ M3U8 แบบลึกจากเว็บไซต์</p>
         </div>
     </div>
 
@@ -379,7 +380,7 @@
                 <!-- Video Player for .m3u8 / .mp4 -->
                 <video id="hlsPlayer" controls playsinline class="w-full h-full object-contain hidden"></video>
                 
-                <!-- NEW: Iframe Player for embed URLs -->
+                <!-- Iframe Player for embed URLs fallback -->
                 <iframe id="iframePlayer" class="w-full h-full border-0 hidden" allowfullscreen allow="autoplay; fullscreen"></iframe>
                 
                 <div id="videoPlaceholder" class="text-center p-6">
@@ -392,7 +393,7 @@
                     <p id="modalStreamUrl" class="text-xs font-mono text-slate-400 truncate"></p>
                 </div>
                 <button onclick="copyStreamUrl()" class="shrink-0 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1.5">
-                    <i class="fa-solid fa-copy"></i> คัดลอก
+                    <i class="fa-solid fa-copy"></i> คัดลอกลิงก์
                 </button>
             </div>
         </div>
@@ -426,7 +427,6 @@
             if (cb.checked) cb.nextElementSibling.querySelector('.fa-check').classList.remove('opacity-0');
         });
 
-        // Utilities
         function escapeHTML(str) {
             if (!str) return '';
             return str.toString().replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -482,7 +482,7 @@
             if (isNaN(endVal) || endVal < 1) { endVal = 1; endInput.value = 1; }
             
             if (endVal < startVal) {
-                endInput.value = startVal; // Force end page to be at least start page
+                endInput.value = startVal; 
             }
         }
 
@@ -507,6 +507,19 @@
                 filterAndRender();
                 showToast('ล้างฐานข้อมูลสำเร็จ!', 'success');
             }
+        }
+
+        function updateGlobalActionsUI() {
+            const container = document.getElementById('globalActions');
+            const emptyState = document.getElementById('emptyState');
+            if (gatheredSeries.length > 0) {
+                container.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+            } else {
+                container.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            }
+            document.getElementById('countBadge').textContent = `${gatheredSeries.length} เรื่อง`;
         }
 
         function handleSearchDebounced() {
@@ -566,12 +579,11 @@
             infoText.textContent = `แสดงรายการ ${startItem} - ${endItem} จาก ${currentDisplayList.length}`;
         }
 
-        // --- Core Fetching Logic ---
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
         
         function getSafeUrl(url) { try { return encodeURI(decodeURI(url)); } catch(e) { return encodeURI(url); } }
 
-        async function requestWithRetry(url, retries = 3) {
+        async function requestWithRetry(url, retries = 3, isSubRequest = false) {
             const proxyInput = document.getElementById('proxyInput').value.trim();
             const targetUrl = getSafeUrl(url);
             const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(targetUrl)) : targetUrl;
@@ -580,16 +592,29 @@
                 if (isStopped) return null;
                 const controller = new AbortController();
                 activeControllers.add(controller);
-                const timeoutId = setTimeout(() => controller.abort(), 12000);
+                // Give sub-requests slightly longer timeout as embed sites can be slow
+                const timeoutLimit = isSubRequest ? 15000 : 10000; 
+                const timeoutId = setTimeout(() => controller.abort(), timeoutLimit);
                 
                 try {
-                    const res = await fetch(fetchUrl, { signal: controller.signal });
+                    const res = await fetch(fetchUrl, { 
+                        signal: controller.signal,
+                        // Add dummy headers to trick some basic bot protections if proxy allows passing headers
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                            'Accept-Language': 'en-US,en;q=0.5'
+                        }
+                    });
                     if (res.status === 404) return "404";
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     return await res.text();
                 } catch (e) {
                     if (isStopped) return null;
-                    if (i === retries - 1) { appendLog(`❌ โหลดหน้าเว็บล้มเหลว: ${url}`, 'text-rose-500'); return null; }
+                    if (i === retries - 1) { 
+                        if(!isSubRequest) appendLog(`❌ โหลดหน้าเว็บล้มเหลว: ${url}`, 'text-rose-500'); 
+                        return null; 
+                    }
                     await sleep(1500);
                 } finally {
                     clearTimeout(timeoutId); activeControllers.delete(controller);
@@ -598,7 +623,6 @@
             return null;
         }
 
-        // --- NEW: ADVANCED JS UNPACKER & EXTRACTOR ---
         function unpackJS(code) {
             try {
                 let argsStr = code.match(/}\s*\((.*?)\)\s*\)$/);
@@ -632,7 +656,9 @@
                     }
                     return p;
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.warn("Unpack fail", e);
+            }
             return code;
         }
 
@@ -640,12 +666,11 @@
             let urls = [];
             
             const cleanUrl = (u) => {
-                let cleaned = u.replace(/\\\//g, '/'); // แก้ไขกรณีลิงก์ติด JSON Escaped (เช่น \/)
+                let cleaned = u.replace(/\\\//g, '/').replace(/\\"/g, '').replace(/\\'/g, ''); 
                 if (cleaned.startsWith('//')) cleaned = 'https:' + cleaned;
                 return cleaned;
             };
 
-            // ถอดรหัส Hex (\x) และ Unicode (\u) ที่มักใช้ซ่อนลิงก์
             let unescapedHtml = html;
             try {
                 unescapedHtml = html.replace(/\\x([0-9A-Fa-f]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16)))
@@ -653,28 +678,34 @@
             } catch(e) {}
 
             const searchPatterns = (text) => {
-                // 1. Standard & JSON Escaped (.m3u8 or .mp4)
-                let m3u8Match = text.match(/(https?:(?:\\\/\\\/|\/\/)[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
-                if (m3u8Match) urls.push(...m3u8Match.map(cleanUrl));
-                
-                // 2. Protocol relative
+                // 1. ADVANCED PLAYER CONFIG REGEX (JWPlayer, VideoJS, custom HTML5 setups)
+                // Matches patterns like: file: "https://...m3u8", source: '...', src:"..."
+                let playerMatch = text.match(/(?:file|source|src|url)["'\s]*[:=]["'\s]*(https?:\/\/[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
+                if (playerMatch) {
+                    playerMatch.forEach(m => {
+                        let innerMatch = m.match(/["'](https?:\/\/[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)["']/i);
+                        if(innerMatch && innerMatch[1]) urls.push(cleanUrl(innerMatch[1]));
+                    });
+                }
+
+                // 2. BLUNT FORCE M3U8 REGEX (Finds ANY URL ending in .m3u8 in the text)
+                let bluntM3u8 = text.match(/(https?:\/\/[a-zA-Z0-9.\-_~:/?#\[\]@!$&'()*+,;=]+?\.m3u8[a-zA-Z0-9.\-_~:/?#\[\]@!$&'()*+,;=]*)/gi);
+                if (bluntM3u8) urls.push(...bluntM3u8.map(cleanUrl));
+
+                // 3. Protocol relative
                 let relMatch = text.match(/((?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
                 if (relMatch) urls.push(...relMatch.map(cleanUrl));
 
-                // 3. URL Encoded
+                // 4. URL Encoded
                 let encodedMatch = text.match(/(https%3A%2F%2F[^"'\s<>]+?\.(?:m3u8|mp4)[^"'\s<>]*)/gi);
                 if (encodedMatch) urls.push(...encodedMatch.map(decodeURIComponent));
-
-                // 4. Target Specific domains (vdohls.com) even if extension is hidden
-                let specificMatch = text.match(/(https?:(?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]*vdohls\.com[^"'\s<>]*)/gi);
-                if(specificMatch) urls.push(...specificMatch.map(cleanUrl));
             };
 
-            // ค้นหาทั้งในโค้ดดิบและโค้ดที่ถอด Hex แล้ว
+            // Search raw HTML and unescaped HTML
             searchPatterns(html);
             if (html !== unescapedHtml) searchPatterns(unescapedHtml);
 
-            // 5. Base64 Decoder
+            // 5. Base64 Decoder (Search entire document for base64 looking strings that might be URLs)
             let b64Matches = unescapedHtml.match(/aHR0c[a-zA-Z0-9+\/=?_-]+/g);
             if (b64Matches) {
                 b64Matches.forEach(b64 => {
@@ -682,18 +713,22 @@
                         let padded = b64.replace(/-/g, '+').replace(/_/g, '/');
                         while (padded.length % 4 !== 0) padded += '=';
                         let decoded = atob(padded);
-                        if (decoded.includes('.m3u8') || decoded.includes('.mp4') || decoded.includes('vdohls.com')) urls.push(decoded);
+                        // If it decodes to a valid video format
+                        if (decoded.includes('.m3u8') || decoded.includes('.mp4')) {
+                            urls.push(decoded);
+                        }
                     } catch(e) {}
                 });
             }
             
-            // 6. Unpack packed JS
+            // 6. Unpack packed JS (Loop through ALL packed scripts found)
             let packedMatches = unescapedHtml.match(/eval\s*\(\s*function\s*\(p,a,c,k,e,d\).*?\)\s*\)/g);
             if (packedMatches) {
                 packedMatches.forEach(packed => {
                     let unpacked = unpackJS(packed);
-                    searchPatterns(unpacked);
+                    searchPatterns(unpacked); // Search inside unpacked JS
                     
+                    // Also check for base64 inside the unpacked JS
                     let b64 = unpacked.match(/aHR0c[a-zA-Z0-9+\/=?_-]+/g);
                     if (b64) {
                         b64.forEach(b => {
@@ -701,7 +736,7 @@
                                 let padded = b.replace(/-/g, '+').replace(/_/g, '/');
                                 while (padded.length % 4 !== 0) padded += '=';
                                 let decoded = atob(padded);
-                                if (decoded.includes('.m3u8') || decoded.includes('.mp4') || decoded.includes('vdohls.com')) urls.push(decoded);
+                                if (decoded.includes('.m3u8') || decoded.includes('.mp4')) urls.push(decoded);
                             } catch(e) {}
                         });
                     }
@@ -711,43 +746,43 @@
             return [...new Set(urls)];
         }
 
-        // --- NEW: RECURSIVE DEEP SCRAPER ---
         async function recursiveDeepScrape(url, maxDepth, currentDepth = 0, visited = new Set()) {
-            if (currentDepth > maxDepth || visited.has(url)) return [url];
+            if (currentDepth > maxDepth || visited.has(url)) return { urls: [], type: 'max_depth' };
             visited.add(url);
             
-            const html = await requestWithRetry(url);
-            if (!html || html === "404") return [url];
+            const html = await requestWithRetry(url, 2, true); // Use subRequest config
+            if (!html || html === "404") return { urls: [], type: 'failed' };
 
-            // 1. Try to find M3U8/MP4 immediately
+            // 1. AGGRESSIVE M3U8 EXTRACTION (Do this first on the loaded HTML)
             let extracted = extractUrlsFromText(html);
-            if (extracted.length > 0) return extracted;
+            // If we found actual video files, return them immediately!
+            let m3u8s = extracted.filter(u => u.includes('.m3u8') || u.includes('.mp4'));
+            if (m3u8s.length > 0) {
+                return { urls: m3u8s, type: 'video' };
+            }
 
+            // 2. If no video found, look for Iframes to dive deeper
             let iframes = [];
-            
-            // 2. Extract standard iframes
             let iframeMatch;
             const iframeRegex = /<iframe[^>]+(?:data-)?src=["']([^"']+)["']/gi;
             while ((iframeMatch = iframeRegex.exec(html)) !== null) {
                 let src = iframeMatch[1];
-                if (!src.includes('histats.com') && !src.includes('facebook.com') && !src.includes('twitter.com')) {
+                if (!src.includes('histats.com') && !src.includes('facebook.com') && !src.includes('twitter.com') && !src.includes('google.com')) {
                     iframes.push(src);
                 }
             }
 
-            // 3. Brute-force guess embed domains (in case it's generated via JS and has no iframe tag)
-            let embedDomainMatch = html.match(/(https?:(?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]*(?:streamwish|senvid|filemoon|dood|jawcloud|vtube|uqload|javzero)[a-zA-Z0-9.\/_-]+)/gi);
+            // 3. Brute-force guess embed domains (in case it's JS generated and missing iframe tag)
+            // Included javzero, streamwish, etc.
+            let embedDomainMatch = html.match(/(https?:(?:\\\/\\\/|\/\/)[a-zA-Z0-9.-]*(?:streamwish|senvid|filemoon|dood|jawcloud|vtube|uqload|javzero|voe)[a-zA-Z0-9.\/_-]+)/gi);
             if (embedDomainMatch) {
-                embedDomainMatch.forEach(u => {
-                    iframes.push(u.replace(/\\\//g, '/'));
-                });
+                embedDomainMatch.forEach(u => iframes.push(u.replace(/\\\//g, '/')));
             }
 
-            // Clean up and process nested iframes
             iframes = [...new Set(iframes)].filter(u => u !== url && !u.includes('avmisohd.to'));
             
             if (iframes.length > 0) {
-                let allDeepUrls = [];
+                let allDeepResults = [];
                 for (let ifrSrc of iframes) {
                     let fullUrl = ifrSrc;
                     if (ifrSrc.startsWith('//')) fullUrl = 'https:' + ifrSrc;
@@ -757,13 +792,16 @@
                         try { fullUrl = new URL(ifrSrc, url).href; } catch(e){}
                     }
                     
-                    let deepUrls = await recursiveDeepScrape(fullUrl, maxDepth, currentDepth + 1, visited);
-                    allDeepUrls.push(...deepUrls);
+                    let deepResult = await recursiveDeepScrape(fullUrl, maxDepth, currentDepth + 1, visited);
+                    if (deepResult.type === 'video') {
+                        // If a deeper scrape found a video, we want THAT, ignore the embed url
+                        allDeepResults.push(...deepResult.urls);
+                    }
                 }
-                if (allDeepUrls.length > 0) return [...new Set(allDeepUrls)];
+                if (allDeepResults.length > 0) return { urls: [...new Set(allDeepResults)], type: 'video' };
             }
             
-            // 4. Handle JS Redirects (window.location.href)
+            // 4. Handle JS Redirects if no iframes worked
             let redirectMatch = html.match(/location(?:\.href)?\s*=\s*["']([^"']+)["']/i) || html.match(/replace\s*\(\s*["']([^"']+)["']\s*\)/i);
             if (redirectMatch) {
                 let redirUrl = redirectMatch[1];
@@ -772,30 +810,32 @@
                      try { redirUrl = new URL(redirUrl, url).href; } catch(e){}
                  }
                  if (redirUrl && redirUrl.startsWith('http')) {
-                     return await recursiveDeepScrape(redirUrl, maxDepth, currentDepth + 1, visited);
+                     let redirResult = await recursiveDeepScrape(redirUrl, maxDepth, currentDepth + 1, visited);
+                     if(redirResult.type === 'video') return redirResult;
                  }
             }
 
-            return [url]; // Return current URL if no deeper video found
+            // Fallback: If we couldn't find a video file anywhere in the depth, return the current URL 
+            // ONLY if we are > depth 0 (meaning it's an embed URL we tried to scrape). 
+            // It might be playable via iframe even if we couldn't get the m3u8.
+            return { urls: [url], type: 'embed_fallback' }; 
         }
         // ---------------------------------
 
-        // Parse individual Video Post using pre-fetched metadata from category page
         async function parseVideoPage(item, categoryText) {
             const html = await requestWithRetry(item.url);
             if (!html || html === "404") return null;
             
             const doc = new DOMParser().parseFromString(html, "text/html");
+            let initialLinks = [];
             
-            // 1. หาลิงก์ Stream (พยายามหา iframe, video tag, หรือ m3u8)
-            let streamUrls = [];
-            
+            // 1. Gather initial possible sources (iframes or direct videos from the main page)
             const iframes = doc.querySelectorAll(".responsive-player iframe, iframe");
             iframes.forEach(ifr => {
                 let src = ifr.getAttribute("src") || ifr.getAttribute("data-src");
                 if (src && !src.includes('facebook.com') && !src.includes('twitter.com') && !src.includes('histats.com')) {
-                    if (src.startsWith('//')) src = 'https:' + src; // NEW: Fix protocol relative URLs
-                    streamUrls.push(src);
+                    if (src.startsWith('//')) src = 'https:' + src;
+                    initialLinks.push(src);
                 }
             });
 
@@ -804,49 +844,68 @@
                 let src = v.getAttribute("src");
                 if(src && (src.includes('.mp4') || src.includes('.m3u8'))) {
                     if (src.startsWith('//')) src = 'https:' + src;
-                    streamUrls.push(src);
+                    initialLinks.push(src);
                 }
             });
 
-            if(streamUrls.length === 0) {
+            if(initialLinks.length === 0) {
                 const m3u8Match = html.match(/(https?:\/\/[^"']+\.m3u8[^"']*)/i);
                 if(m3u8Match) {
-                    streamUrls.push(m3u8Match[1]);
+                    initialLinks.push(m3u8Match[1]);
                 } else {
-                     // Check for protocol relative m3u8 just in case
                      const m3u8MatchRel = html.match(/(\/\/[^"']+\.m3u8[^"']*)/i);
-                     if (m3u8MatchRel) streamUrls.push('https:' + m3u8MatchRel[1]);
+                     if (m3u8MatchRel) initialLinks.push('https:' + m3u8MatchRel[1]);
                 }
             }
 
-            streamUrls = [...new Set(streamUrls)];
+            initialLinks = [...new Set(initialLinks)];
 
-            // --- RECURSIVE DEEP SCRAPE ACTIVATION ---
+            // --- DEEP SCRAPE ACTIVATION ---
             let finalStreamUrls = [];
-            for (let url of streamUrls) {
-                if (!url.includes('.m3u8') && !url.includes('.mp4')) {
-                    // It's likely an iframe embed or dynamic script, use recursive scraper
-                    // Max depth = 3 to prevent infinite loops while catching nested streams
-                    let deepUrls = await recursiveDeepScrape(url, 3); 
-                    finalStreamUrls.push(...deepUrls);
+            let isDeepExtracted = false;
+
+            for (let link of initialLinks) {
+                if (!link.includes('.m3u8') && !link.includes('.mp4')) {
+                    // It's likely an iframe embed (like javzero.xyz), initiate deep scrape
+                    // Max depth = 3 to find the hidden m3u8 inside the player config
+                    let scrapeResult = await recursiveDeepScrape(link, 3); 
+                    
+                    if (scrapeResult.type === 'video') {
+                        finalStreamUrls.push(...scrapeResult.urls);
+                        isDeepExtracted = true; // Flag that we successfully found a hidden m3u8
+                    } else if (scrapeResult.type === 'embed_fallback') {
+                        finalStreamUrls.push(link); // Keep original iframe as last resort
+                    }
                 } else {
-                    finalStreamUrls.push(url); // Already a direct video link
+                    finalStreamUrls.push(link); // Already a direct video link
                 }
             }
-            streamUrls = [...new Set(finalStreamUrls)];
+            
+            // Priority Filtering: If we have ANY .m3u8/.mp4 links, discard the fallback embed links
+            // Because the user explicitly wants m3u8 for their playlist.
+            let hasVideoFiles = finalStreamUrls.some(u => u.includes('.m3u8') || u.includes('.mp4'));
+            if (hasVideoFiles) {
+                finalStreamUrls = finalStreamUrls.filter(u => u.includes('.m3u8') || u.includes('.mp4'));
+            }
+
+            finalStreamUrls = [...new Set(finalStreamUrls)];
             // ---------------------------------------------------
 
             let episodes = [];
-            if(streamUrls.length > 0) {
-                streamUrls.forEach((url, idx) => {
+            if(finalStreamUrls.length > 0) {
+                finalStreamUrls.forEach((url, idx) => {
+                    let epTitle = "Main Video";
+                    if (finalStreamUrls.length > 1) epTitle = `Part ${idx+1}`;
+                    if (isDeepExtracted && url.includes('.m3u8')) epTitle += " (M3U8 เจาะลึก)";
+                    
                     episodes.push({
-                        title: streamUrls.length > 1 ? `Part ${idx+1}` : "Main Video",
+                        title: epTitle,
                         url: url,
                         isDead: false
                     });
                 });
             } else {
-                episodes.push({ title: "Player Not Found (Requires Deep Scrape)", url: item.url, isDead: true });
+                episodes.push({ title: "Player Not Found (Failed to extract M3U8)", url: item.url, isDead: true });
             }
 
             let tags = [categoryText];
@@ -941,8 +1000,8 @@
                             if (isStopped) break;
                             const chunk = items.slice(i, i + concurrencyLimit);
                             
-                            loader.textContent = `⏳ หน้า ${p} | กำลังโหลดกลุ่มที่ ${Math.ceil((i+1)/concurrencyLimit)}/${Math.ceil(items.length/concurrencyLimit)}`;
-                            updateProgress((((globalPageCounter - 1) / totalPagesToScan) * 100) + (((i + 1) / items.length) * (100 / totalPagesToScan)), `ดึงข้อมูลทีละ ${concurrencyLimit} เรื่อง`);
+                            loader.textContent = `⏳ หน้า ${p} | เจาะลิงก์กลุ่ม ${Math.ceil((i+1)/concurrencyLimit)}/${Math.ceil(items.length/concurrencyLimit)}`;
+                            updateProgress((((globalPageCounter - 1) / totalPagesToScan) * 100) + (((i + 1) / items.length) * (100 / totalPagesToScan)), `ดึงเจาะลึกทีละ ${concurrencyLimit} เรื่อง`);
                             
                             const chunkPromises = chunk.map(async (item) => {
                                 await sleep(Math.floor(Math.random() * 500) + 200); 
@@ -954,7 +1013,14 @@
                                     } else {
                                         gatheredSeries.push(data);
                                     }
-                                    appendLog(`✅ เก็บข้อมูล: ${data.title.substring(0, 30)}...`, 'text-pink-300');
+                                    
+                                    // Check if we got an m3u8
+                                    let hasM3u8 = data.episodes.some(ep => ep.url.includes('.m3u8'));
+                                    if(hasM3u8) {
+                                        appendLog(`🟢 สำเร็จ! ได้ M3U8: ${data.title.substring(0, 25)}...`, 'text-emerald-300');
+                                    } else {
+                                        appendLog(`🟡 เจาะ M3U8 ไม่สำเร็จ: ${data.title.substring(0, 25)}...`, 'text-amber-300');
+                                    }
                                 }
                             });
 
@@ -989,7 +1055,6 @@
             activeControllers.clear();
         }
 
-        // --- UI Rendering ---
         function renderCard(data, targetContainer = null) {
             let m3u = "\uFEFF#EXTM3U\n";
             const safeTitle = (data.title || 'AV Video').replace(/["',]/g, '').trim();
@@ -998,12 +1063,15 @@
 
             let validEps = 0;
             let optionsHtml = '';
+            let hasM3u8File = false;
+
             data.episodes.forEach(ep => {
                 if (!ep.isDead) {
                     const safeEp = (ep.title || 'Main').replace(/["',]/g, '').trim();
                     m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroup}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEp}\n${ep.url.trim()}\n`;
                     optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(ep.title)}</option>`;
                     validEps++;
+                    if(ep.url.includes('.m3u8') || ep.url.includes('.mp4')) hasM3u8File = true;
                 }
             });
             if (validEps === 0) m3u += `# No active streams found\n`;
@@ -1012,11 +1080,20 @@
             card.className = "bg-[#161219] rounded-2xl overflow-hidden border border-rose-900/30 shadow-xl transition-all hover:border-rose-500/50 flex flex-col relative";
             
             let tagsHtml = data.tags.map(t => `<span class="bg-rose-900/40 text-rose-300 border border-rose-800/50 text-[10px] font-bold px-2 py-0.5 rounded uppercase">${escapeHTML(t)}</span>`).join('');
+            
+            let statusBadge = '';
+            if(validEps === 0) {
+                statusBadge = '<span class="absolute top-2 right-2 bg-rose-600 text-white text-[10px] px-2 py-1 rounded shadow"><i class="fa-solid fa-link-slash"></i> เสีย</span>';
+            } else if(hasM3u8File) {
+                statusBadge = '<span class="absolute top-2 right-2 bg-emerald-600 text-white text-[10px] px-2 py-1 rounded shadow"><i class="fa-solid fa-check"></i> M3U8</span>';
+            } else {
+                 statusBadge = '<span class="absolute top-2 right-2 bg-amber-600 text-white text-[10px] px-2 py-1 rounded shadow"><i class="fa-solid fa-code"></i> Iframe</span>';
+            }
 
             card.innerHTML = `
                 <div class="relative overflow-hidden aspect-video bg-black group">
                     <img src="${escapeHTML(data.poster)}" alt="Poster" onerror="this.src='https://placehold.co/600x400/1C1520/E11D48?text=NO+IMG'" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
-                    ${validEps === 0 ? '<span class="absolute top-2 right-2 bg-rose-600 text-white text-[10px] px-2 py-1 rounded shadow"><i class="fa-solid fa-link-slash"></i> ไม่พบสตรีม</span>' : ''}
+                    ${statusBadge}
                 </div>
                 <div class="p-4 flex flex-col justify-between flex-grow">
                     <div>
@@ -1029,7 +1106,7 @@
                             <select class="ep-selector flex-grow bg-[#0B080D] border border-slate-700 rounded-lg text-xs px-2 focus:outline-none focus:border-rose-500 text-slate-300">
                                 ${optionsHtml || '<option value="">ไม่มีลิงก์เล่น</option>'}
                             </select>
-                            <button onclick="previewVideo(this)" ${validEps === 0 ? 'disabled' : ''} class="shrink-0 bg-rose-600 hover:bg-rose-500 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow">
+                            <button onclick="previewVideo(this)" ${validEps === 0 ? 'disabled' : ''} class="shrink-0 bg-rose-600 hover:bg-rose-500 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow" title="ทดสอบเล่น">
                                 <i class="fa-solid fa-play text-xs"></i>
                             </button>
                         </div>
@@ -1052,7 +1129,6 @@
             else document.getElementById("output").appendChild(card);
         }
 
-        // Accordion M3U Logic
         function toggleSingleM3U(btn) {
             const wrapper = btn.nextElementSibling;
             const isHidden = wrapper.classList.contains('hidden');
@@ -1113,17 +1189,14 @@
             showToast("บันทึก Backup สำเร็จ!", "success");
         }
 
-        // --- Player ---
         let activeHls = null;
         function previewVideo(btn) {
             const select = btn.previousElementSibling;
             let url = select.value; 
             if(!url) return;
 
-            // NEW: Automatically fix protocol-relative URLs if any slipped through
             if (url.startsWith('//')) url = 'https:' + url;
             
-            // หา Card title เพื่อแสดง
             const card = btn.closest('.bg-\\[\\#161219\\]');
             const title = card.querySelector('h4').innerText;
 
@@ -1140,11 +1213,9 @@
             iframe.classList.add('hidden');
             placeholder.classList.remove('hidden');
 
-            // เคลียร์อันเก่า
             if(activeHls) { activeHls.destroy(); activeHls = null; }
             iframe.src = '';
 
-            // NEW: ถ้าเป็นลิงก์ embed (ไม่ใช่ .m3u8 หรือ .mp4) ให้ฝัง Iframe ทันทีแทนที่จะแจ้ง Error
             if(!url.includes('.m3u8') && !url.includes('.mp4')) {
                 placeholder.classList.add('hidden');
                 iframe.src = url;
@@ -1187,7 +1258,6 @@
             video.pause(); video.removeAttribute('src'); video.load(); 
             video.classList.add('hidden');
             
-            // NEW: Stop and hide iframe
             iframe.src = ''; 
             iframe.classList.add('hidden');
             
@@ -1204,7 +1274,6 @@
             showToast("คัดลอกลิงก์สำเร็จ", "success");
         }
 
-        // Init
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const saved = await localforage.getItem('av_data');
