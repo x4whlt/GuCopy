@@ -425,11 +425,18 @@
             input.value = val;
         }
 
-        // ฟังก์ชันตรวจสอบการแบ่ง Season อัตโนมัติ (แก้ปัญหาเว็บไม่ยอมพิมพ์คำว่า Season ให้)
+        // ฟังก์ชันดึงเลขตอน (หลีกเลี่ยงการไปจับตัวเลขความละเอียดเช่น 1080p แทน)
+        function getEpNum(title) {
+            const m = title.match(/(?:ep|ตอน)[\s\.\-]*(\d+)/i);
+            if (m) return parseInt(m[1], 10);
+            const m2 = title.match(/\d+/);
+            return m2 ? parseInt(m2[0], 10) : null;
+        }
+
+        // ฟังก์ชันตรวจสอบการแบ่ง Season อัตโนมัติ
         function autoFormatEpisodes(episodes) {
             if (!episodes || episodes.length <= 1) return episodes;
 
-            // เช็คว่าในตอนย่อยมีคำบอก Season อยู่แล้วหรือไม่ ถ้ามีระบบก็จะไม่ยุ่ง (เพิ่ม \- เผื่อเว็บใช้ SS-1)
             const hasExplicitSeason = episodes.some(ep => /(?:SS|Season|ภาค)[\s\.\-]*\d+/i.test(ep.title));
             if (hasExplicitSeason) return episodes;
 
@@ -437,11 +444,9 @@
             let descCount = 0;
             let prevNum = -1;
 
-            // ตรวจสอบทิศทางการเรียงลำดับ ป้องกันเพี้ยนถ้าเว็บเรียงจากตอนล่าสุดไปตอนแรก
             for (let ep of episodes) {
-                const match = ep.title.match(/\d+/);
-                if (match) {
-                    const num = parseInt(match[0], 10);
+                const num = getEpNum(ep.title);
+                if (num !== null) {
                     if (prevNum !== -1) {
                         if (num > prevNum) ascCount++;
                         if (num < prevNum) descCount++;
@@ -450,16 +455,14 @@
                 }
             }
 
-            if (descCount > ascCount) return episodes; // ข้ามการทำ Auto-Season ถ้าเรียงถอยหลัง
+            if (descCount > ascCount) return episodes; 
 
             let needsAutoSeason = false;
             let lastNum = -1;
             
-            // สแกนหาการ "รีเซ็ต" ของตัวเลข (เช่น นับถึง 12 แล้วตกกลับมา 1 ใหม่)
             for (let ep of episodes) {
-                const match = ep.title.match(/\d+/);
-                if (match) {
-                    const num = parseInt(match[0], 10);
+                const num = getEpNum(ep.title);
+                if (num !== null) {
                     if (lastNum > 1 && num < lastNum && (num === 1 || num === 0)) {
                         needsAutoSeason = true;
                         break;
@@ -468,21 +471,17 @@
                 }
             }
 
-            // ถ้าระบบพบการรีเซ็ตตัวเลข จะทำการประทับตรา SS1, SS2 เข้าไปข้างหน้าให้ทันที
             if (needsAutoSeason) {
                 let currentSeason = 1;
                 lastNum = -1;
                 for (let ep of episodes) {
-                    const match = ep.title.match(/\d+/);
-                    if (match) {
-                        const num = parseInt(match[0], 10);
-                        // ถ้าตกกลับมา 1 แปลว่าขึ้น Season ใหม่
+                    const num = getEpNum(ep.title);
+                    if (num !== null) {
                         if (lastNum > 1 && num < lastNum && (num === 1 || num === 0)) {
                             currentSeason++;
                         }
                         lastNum = num;
                     }
-                    // ประทับตรา SS ลงไปในชื่อตอน
                     ep.title = `SS${currentSeason} ${ep.title}`;
                 }
             }
@@ -499,11 +498,11 @@
 
             clean = clean.replace(/พากย์ไทย\+ซับไทย|พากย์ไทย|ซับไทย|บรรยายไทย/gi, '');
 
-            // เพิ่ม \- ลงไปใน Regex เผื่อเว็บพิมพ์ว่า SS-1 หรือ Season-2
-            const ssMatch = clean.match(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+)/i);
+            // เพิ่มให้รองรับการดักจับช่วงซีซั่นเช่น Season 1-2
+            const ssMatch = clean.match(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
             if (ssMatch) {
                 tags.push({ text: `Season ${ssMatch[1]}`, type: 'season' });
-                clean = clean.replace(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+)/gi, '');
+                clean = clean.replace(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/gi, '');
             }
 
             clean = clean.replace(/[\(\)\[\]\-]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -521,7 +520,6 @@
         async function requestWithRetry(url, isJson = false, retries = 3) {
             const proxyInput = document.getElementById('proxyInput').value.trim();
             
-            // ถ้าไม่ได้ใส่ Proxy เราจะให้ fetch ทำงานโดยใช้ URL ตรงๆ ไม่ต้องเอาไปเข้ารหัสต่อท้าย
             const targetUrl = getSafeUrl(url);
             const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(targetUrl)) : targetUrl;
 
@@ -615,7 +613,6 @@
                     const url = await getStream(btn.id);
                     if (url) {
                         triggerSound('tick');
-                        // เปลี่ยนจาก /[\r\n]+/g เป็น /[\r\n\s]+/g เพื่อเคลียร์ช่องว่างซ้ำซ้อนในชื่อตอน
                         const cleanEpTitle = btn.textContent.trim().replace(/[\r\n\s]+/g, " ");
                         return { title: cleanEpTitle, url };
                     }
@@ -655,7 +652,6 @@
             
             if (isStopped) return null;
 
-            // ประมวลผลชื่อตอนเพื่อตรวจจับการซ้อนทับของ Season
             episodes = autoFormatEpisodes(episodes);
             
             const { cleanTitle, tags } = extractSeriesInfo(rawTitle);
@@ -719,7 +715,6 @@
             const totalPagesToScan = endPage - startPage + 1;
             updateProgress(0, 'เตรียมระบบเชื่อมต่อ...');
 
-            // ครอบ Global Try-Catch ป้องกันระบบค้าง (Lock-up) เมื่อเกิด Error ร้ายแรงที่ไม่ได้คาดคิด
             try {
                 for (let p = startPage; p <= endPage; p++) {
                     if (isStopped) break;
@@ -730,13 +725,13 @@
                     
                     const catHtml = await requestWithRetry(pageUrl);
                     if (!catHtml) {
-                        // เพิ่มการอัปเดตหลอด Progress ป้องกันหลอดค้างหากเว็บล่มบางหน้า
                         updateProgress(((p - startPage + 1) / totalPagesToScan) * 100, `หน้า ${p} โหลดล้มเหลว ข้ามไปหน้าถัดไป...`);
                         appendLog(`ข้ามหน้าที่ ${p} เนื่องจากโหลดล้มเหลว`, 'text-amber-500');
                         continue;
                     }
 
-                    const regex = /href="(?:https?:\/\/[^\/]+)?\/series\/([^"\/]+)\//g;
+                    // ปรับแก้ Regex ให้เครื่องหมาย / ด้านหลังเป็นแบบ Optional (\/?)
+                    const regex = /href="(?:https?:\/\/[^\/]+)?\/series\/([^"\/]+)\/?/g;
                     const ids = Array.from(new Set([...catHtml.matchAll(regex)])).map(m => m[1]).filter(i => i !== 'series');
                     
                     if(ids.length === 0) {
@@ -891,7 +886,6 @@
             const card = document.createElement("div");
             card.className = "card bg-slate-800 rounded-2xl overflow-hidden border border-slate-700/60 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/50 flex flex-col group";
             
-            // เพิ่ม data-search เพื่อให้ค้นหาจาก ป้ายกำกับ(Tags) ซับไทย/พากย์ไทย/Season ได้ด้วย
             const tagString = data.tags ? data.tags.map(t => t.text).join(' ') : '';
             const searchKeywords = `${data.title} ${data.cleanTitle} ${tagString}`.toLowerCase();
             card.setAttribute('data-title', data.title.toLowerCase());
@@ -902,7 +896,8 @@
             let currentGroupName = "รายการตอนทั้งหมด";
             
             data.episodes.forEach(ep => {
-                const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.\-]*(\d+)/i);
+                // ปรับให้รองรับชื่อซีซั่นแบบห่างช่วง เช่น Season 1-2
+                const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
                 if (ssMatch) {
                     currentGroupName = `Season ${ssMatch[1]}`;
                 }
@@ -920,7 +915,7 @@
                 groupNames.forEach(gName => {
                     optionsHtml += `<optgroup label="📺 ${escapeHTML(gName)}">`;
                     groups[gName].forEach(ep => {
-                        let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+[\s\-\:]*/i, '').trim();
+                        let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
                         if(!cleanEpTitle) cleanEpTitle = ep.title; 
                         optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(cleanEpTitle)}</option>`;
                     });
@@ -1001,7 +996,6 @@
             let visibleCount = 0;
             
             cards.forEach(card => {
-                // เปลี่ยนไปค้นหาจาก data-search เพื่อรองรับการสแกนหา ป้ายกำกับ(Tags) ด้วย
                 const searchStr = card.getAttribute('data-search') || card.getAttribute('data-title');
                 if (searchStr.includes(term)) {
                     card.classList.remove('hidden');
