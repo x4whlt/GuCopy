@@ -82,7 +82,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-slate-700/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 6.2.1 Stable Build (Regex Fixed)</span>
+                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 6.2.2 Stable Build (Accordion M3U Fix)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-yellow-300 to-blue-500 mb-3">
                 SERIES HARVESTER PRO
@@ -293,7 +293,7 @@
             </div>
         </div>
 
-        <div id="output" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[400px] content-start"></div>
+        <div id="output" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start"></div>
         
         <!-- Pagination -->
         <div id="paginationContainer" class="hidden flex flex-col sm:flex-row items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 mt-8">
@@ -610,6 +610,7 @@
             const container = document.getElementById('globalActions');
             const emptyState = document.getElementById('emptyState');
             const countBadge = document.getElementById('countBadge');
+            const outputEl = document.getElementById('output');
             
             countBadge.textContent = `${gatheredSeries.length} เรื่อง`;
             
@@ -618,14 +619,17 @@
             
             if (currentDisplayList.length === 0 && gatheredSeries.length > 0) {
                 emptyState.classList.remove('hidden');
+                outputEl.classList.add('hidden');
                 emptyState.innerHTML = `<i class="fa-solid fa-magnifying-glass text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ไม่พบซีรีส์ที่ค้นหา</h3><p class="text-sm text-slate-600 mt-1">ลองเปลี่ยนคำค้นหา</p>`;
                 document.getElementById('paginationContainer').classList.add('hidden');
             } else if (currentDisplayList.length === 0) {
                 emptyState.classList.remove('hidden');
+                outputEl.classList.add('hidden');
                 emptyState.innerHTML = `<i class="fa-solid fa-layer-group text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลที่จะแสดงผล</h3><p class="text-sm text-slate-600 max-w-sm mx-auto mt-1">ตั้งค่าช่วงหน้าเว็บและคลิกปุ่มสแกนข้อมูลด้านบนเพื่อรับรายการคอนเทนต์</p>`;
                 document.getElementById('paginationContainer').classList.add('hidden');
             } else {
                 emptyState.classList.add('hidden');
+                outputEl.classList.remove('hidden');
             }
         }
 
@@ -1316,10 +1320,11 @@
                         </div>
                     </div>
                     <div class="mt-4 pt-3 border-t border-slate-700/50 flex flex-col gap-2">
-                        <button onclick="toggleSingleM3U(this)" class="w-full text-xs font-semibold bg-slate-900 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg border border-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+                        <!-- Updated to use specific classes for accordion functionality -->
+                        <button onclick="toggleSingleM3U(this)" class="m3u-toggle-btn w-full text-xs font-semibold bg-slate-900 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg border border-slate-700 flex items-center justify-center gap-1.5 transition-colors">
                             <i class="fa-solid fa-code text-[11px]"></i> ดูสคริปต์ M3U Playlist
                         </button>
-                        <div class="hidden mt-2">
+                        <div class="m3u-wrapper hidden mt-2">
                             <div class="flex justify-end mb-1">
                                 <button onclick="copySingleM3U(this)" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-amber-400 flex items-center gap-1"><i class="fa-solid fa-copy"></i> คัดลอก</button>
                             </div>
@@ -1333,11 +1338,27 @@
             else document.getElementById("output").appendChild(card);
         }
 
+        // --- UPDATED ACCORDION TOGGLE FUNCTION ---
         function toggleSingleM3U(btn) {
             const wrapper = btn.nextElementSibling;
-            wrapper.classList.toggle('hidden');
-            if(wrapper.classList.contains('hidden')) btn.innerHTML = `<i class="fa-solid fa-code text-[11px]"></i> ดูสคริปต์ M3U Playlist`;
-            else btn.innerHTML = `<i class="fa-solid fa-xmark text-[11px]"></i> ปิดสคริปต์ M3U`;
+            const isHidden = wrapper.classList.contains('hidden');
+
+            // 1. ปิดกล่องข้อความที่เปิดอยู่ก่อนหน้าทั้งหมด
+            const allWrappers = document.querySelectorAll('.m3u-wrapper:not(.hidden)');
+            allWrappers.forEach(openWrapper => {
+                openWrapper.classList.add('hidden');
+                // คืนค่าข้อความปุ่ม
+                const prevBtn = openWrapper.previousElementSibling;
+                if (prevBtn) {
+                    prevBtn.innerHTML = `<i class="fa-solid fa-code text-[11px]"></i> ดูสคริปต์ M3U Playlist`;
+                }
+            });
+
+            // 2. ถ้าปุ่มที่เรากดมันถูกปิดอยู่ (Hidden) ก็ให้เปิดขึ้นมา
+            if (isHidden) {
+                wrapper.classList.remove('hidden');
+                btn.innerHTML = `<i class="fa-solid fa-xmark text-[11px]"></i> ปิดสคริปต์ M3U`;
+            }
         }
 
         function copySingleM3U(btn) {
