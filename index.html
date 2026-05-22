@@ -232,9 +232,10 @@
 
         <!-- Global Actions / Playlists Download Section -->
         <div id="globalActions" class="hidden mb-6 bg-gradient-to-r from-blue-900/40 via-purple-900/40 to-slate-900/40 rounded-2xl p-6 border border-blue-500/30">
-            <div class="flex flex-col xl:flex-row items-center justify-between gap-4">
-                <div class="flex items-center gap-4 shrink-0">
-                    <div class="p-3 bg-blue-500/20 rounded-xl border border-blue-500/40">
+            <div class="flex flex-col gap-5">
+                <!-- Header part: Always on top -->
+                <div class="flex items-center gap-4 border-b border-slate-700/50 pb-4">
+                    <div class="p-3 bg-blue-500/20 rounded-xl border border-blue-500/40 shrink-0">
                         <i class="fa-solid fa-database text-2xl text-blue-400 animate-bounce"></i>
                     </div>
                     <div>
@@ -242,9 +243,15 @@
                         <p class="text-xs text-slate-300">ส่งออกเพลย์ลิสต์ หรือสำรองฐานข้อมูลได้ที่นี่</p>
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center xl:justify-end gap-2.5">
+                
+                <!-- Action Buttons: Always below the header -->
+                <div class="flex flex-wrap items-center gap-3">
                     <button onclick="downloadAllM3U()" class="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-900 font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all">
                         <i class="fa-solid fa-circle-down text-lg"></i> โหลด M3U
+                    </button>
+                    <!-- ปุ่มสำหรับส่งออกไปแอป (โครงสร้าง Hierarchical) ย้ายมาที่นี่และเปลี่ยนชื่อ -->
+                    <button onclick="exportIPTVJSON()" class="bg-fuchsia-900/50 hover:bg-fuchsia-800 border border-fuchsia-700 text-fuchsia-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="ส่งออก JSON สำหรับนำไปใช้ในแอปพลิเคชัน (แบบมีกลุ่ม)">
+                        <i class="fa-solid fa-file-code text-lg"></i> โหลด JSON
                     </button>
                     <button onclick="copyAllM3UToClipboard()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all">
                         <i class="fa-solid fa-copy"></i> คัดลอก
@@ -256,13 +263,8 @@
                         <i class="fa-solid fa-heart-pulse"></i> เช็กลิงก์เสีย
                     </button>
                     
-                    <!-- ปุ่มสำหรับส่งออกไปแอป (โครงสร้าง Hierarchical) -->
-                    <button onclick="exportIPTVJSON()" class="bg-fuchsia-900/50 hover:bg-fuchsia-800 border border-fuchsia-700 text-fuchsia-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="ส่งออก JSON สำหรับนำไปใช้ในแอปพลิเคชัน (แบบมีกลุ่ม)">
-                        <i class="fa-solid fa-tv"></i> ส่งออก IPTV
-                    </button>
-                    
                     <!-- ปุ่มสำหรับสำรองฐานข้อมูล (โครงสร้างดิบสำหรับนำเข้า) -->
-                    <button onclick="backupDatabase()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="บันทึกฐานข้อมูลดิบเก็บไว้ในคอมเพื่อนำเข้าใหม่">
+                    <button onclick="backupDatabase()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="บันทึกฐานข้อมูลดิบและรูปภาพเก็บไว้ในคอมเพื่อนำเข้าใหม่">
                         <i class="fa-solid fa-database"></i> สำรองข้อมูล
                     </button>
                     
@@ -601,7 +603,14 @@
 
         function backupDatabase() {
             if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้สำรอง", "error"); return; }
-            const dataStr = JSON.stringify(gatheredSeries, null, 2);
+            
+            // Map ข้อมูลให้มี key "image" เพิ่มเข้าไปด้วยเพื่อความชัวร์เวลาโหลดใช้งานที่อื่น
+            const backupData = gatheredSeries.map(series => ({
+                ...series,
+                image: series.poster // เก็บรูปภาพเป็นตัวแปร image เสริม
+            }));
+
+            const dataStr = JSON.stringify(backupData, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url;
@@ -609,7 +618,7 @@
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
             showToast("สำรองฐานข้อมูลดิบสำเร็จ!", "success");
-            appendLog(`[SYSTEM] 💾 สำรองฐานข้อมูล (Backup) เก็บไว้ในเครื่องสำเร็จ`, 'text-blue-400');
+            appendLog(`[SYSTEM] 💾 สำรองฐานข้อมูลพร้อมลิงก์รูปภาพ เก็บไว้ในเครื่องสำเร็จ`, 'text-blue-400');
         }
 
         function importJSON(event) {
@@ -626,6 +635,11 @@
                         data.forEach(importedItem => {
                             if (!importedItem || !importedItem.id || !Array.isArray(importedItem.episodes)) return;
                             
+                            // จัดการกรณีมีการส่งออก image จากระบบเก่า
+                            if (importedItem.image && !importedItem.poster) {
+                                importedItem.poster = importedItem.image;
+                            }
+
                             const existingIdx = gatheredSeries.findIndex(s => s.id === importedItem.id);
                             if (existingIdx === -1) {
                                 gatheredSeries.push(importedItem); newAdded++;
