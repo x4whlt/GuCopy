@@ -366,7 +366,8 @@
         let isStopped = false;
         let gatheredSeries = []; 
         let storageFullFlag = false; 
-        let globalAbortController = null; // สำหรับยกเลิกการเชื่อมต่อทันที
+        // แก้ไข 1: เปลี่ยนมาใช้ Set เพื่อรองรับ Concurrency แยกตาม Thread
+        let activeControllers = new Set();
         
         // --- ระบบเสียงและ Toast ---
         let audioCtx = null;
@@ -684,13 +685,16 @@
             for (let i = 0; i < retries; i++) {
                 if (isStopped) return null;
                 
-                globalAbortController = new AbortController();
+                // สร้าง Controller แยกเฉพาะของแต่ละ Request
+                const controller = new AbortController();
+                activeControllers.add(controller);
+                
                 const timeoutId = setTimeout(() => {
-                    if (globalAbortController) globalAbortController.abort();
+                    controller.abort();
                 }, 10000);
                 
                 try {
-                    const res = await fetch(fetchUrl, { signal: globalAbortController.signal });
+                    const res = await fetch(fetchUrl, { signal: controller.signal });
                     clearTimeout(timeoutId);
                     if (res.status === 404) return "404_NOT_FOUND"; // Custom response to bypass loop
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
@@ -706,6 +710,8 @@
                     }
                     appendLog(`⚠️ ขัดข้อง (${errMsg}) ลองใหม่รอบ ${i+2}/${retries}...`, 'text-amber-500');
                     await sleep(2000);
+                } finally {
+                    activeControllers.delete(controller);
                 }
             }
             return null;
@@ -875,7 +881,8 @@
                                         gatheredSeries[existingIndex] = data;
                                         await saveToStorage();
                                         
-                                        const oldCard = document.querySelector(`.card[data-id="${data.id}"]`);
+                                        const safeId = CSS.escape(data.id);
+                                        const oldCard = document.querySelector(`.card[data-id="${safeId}"]`);
                                         const tempContainer = document.createElement('div');
                                         renderCard(data, p, tempContainer); 
                                         
@@ -929,6 +936,7 @@
         // --- ระบบ Check Dead Links ---
         async function verifyLinks() {
             if (gatheredSeries.length === 0) return;
+            getAudioContext(); // แก้ไข 3: ปลุกระบบเสียงทันทีที่ผู้ใช้คลิก เพื่อไม่ให้เบราว์เซอร์บล็อกเมื่อทำงานเสร็จ
             
             let allEps = [];
             gatheredSeries.forEach(series => {
@@ -964,22 +972,33 @@
                 const chunk = allEps.slice(i, i + limit);
                 
                 await Promise.all(chunk.map(async (item) => {
+                    if (isStopped) return; // เช็กก่อนเริ่ม fetch ย่อย
+                    
+                    const controller = new AbortController();
+                    activeControllers.add(controller);
+                    let timeoutId;
+
                     try {
                         const proxyInput = document.getElementById('proxyInput').value.trim();
                         const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(getSafeUrl(item.ep.url))) : getSafeUrl(item.ep.url);
                         
-                        globalAbortController = new AbortController();
-                        const timeoutId = setTimeout(() => {
-                            if (globalAbortController) globalAbortController.abort();
+                        timeoutId = setTimeout(() => {
+                            controller.abort();
                         }, 8000); 
                         
-                        const checkRes = await fetch(fetchUrl, { method: 'GET', signal: globalAbortController.signal });
-                        if (globalAbortController) globalAbortController.abort(); 
+                        const checkRes = await fetch(fetchUrl, { method: 'GET', signal: controller.signal });
+                        clearTimeout(timeoutId);
                         
                         if (!checkRes.ok && checkRes.status !== 405) { item.ep.isDead = true; deadCount++; } 
                         else { item.ep.isDead = false; }
                     } catch (e) {
-                        item.ep.isDead = true; deadCount++;
+                        clearTimeout(timeoutId); // ตอนนี้จะไม่เกิด ReferenceError แล้ว
+                        // ไม่นับว่าเป็นลิงก์เสียถ้าถูกสั่งหยุดการทำงาน
+                        if (e.name !== 'AbortError' || !isStopped) {
+                            item.ep.isDead = true; deadCount++;
+                        }
+                    } finally {
+                        activeControllers.delete(controller);
                     }
                     checked++;
                 }));
@@ -1004,9 +1023,10 @@
             if (!activeHarvest) return;
             isStopped = true;
             appendLog(`[SYSTEM] กำลังส่งคำสั่งหยุดการทำงานและตัดการเชื่อมต่อ...`, 'text-rose-500');
-            if (globalAbortController) {
-                globalAbortController.abort();
-            }
+            // ยกเลิกทุก Request ที่ค้างอยู่ในระบบทั้งหมดทันที
+            activeControllers.forEach(controller => controller.abort());
+            activeControllers.clear();
+            
             document.getElementById('btnStop').disabled = true;
             document.getElementById('btnStop').textContent = "กำลังหยุด...";
         }
@@ -1061,15 +1081,15 @@
         function renderCard(data, pageNum, targetContainer = null) {
             let m3u = "\uFEFF#EXTM3U\n";
             const groupName = data.categoryText || "ซีรีส์ทั่วไป";
-            // ป้องกัน M3U เสียหายจากการเว้นบรรทัด
-            const safeTitle = data.title.replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
-            const safeGroupName = groupName.replace(/"/g, "'");
+            // แก้ไข 4: ป้องกัน M3U พังจากการเว้นบรรทัด และลบเครื่องหมายลูกน้ำ (,) เพื่อไม่ให้ตัวแบ่ง Metadata ในไฟล์เสีย
+            const safeTitle = data.title.replace(/["',]/g, ' ').replace(/[\r\n]+/g, ' ').trim();
+            const safeGroupName = groupName.replace(/["',]/g, ' ').trim();
             const safePoster = data.poster.replace(/"/g, "'");
 
             let activeEpsCount = 0;
             data.episodes.forEach(ep => {
                 if (!ep.isDead) {
-                    const safeEpTitle = ep.title.replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
+                    const safeEpTitle = ep.title.replace(/["',]/g, ' ').replace(/[\r\n]+/g, ' ').trim();
                     m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
                     activeEpsCount++;
                 }
@@ -1211,11 +1231,12 @@
             let megaM3U = "\uFEFF#EXTM3U\n";
             gatheredSeries.forEach(series => {
                 const groupName = series.categoryText || "ซีรีส์ทั่วไป";
-                const safeTitle = series.title.replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
-                const safeGroupName = groupName.replace(/"/g, "'");
+                // ใช้ตรรกะ Regex เดียวกันกับด้านบนเพื่อป้องกันบั๊ก
+                const safeTitle = series.title.replace(/["',]/g, ' ').replace(/[\r\n]+/g, ' ').trim();
+                const safeGroupName = groupName.replace(/["',]/g, ' ').trim();
                 const safePoster = series.poster.replace(/"/g, "'");
                 series.episodes.forEach(ep => {
-                    const safeEpTitle = ep.title.replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
+                    const safeEpTitle = ep.title.replace(/["',]/g, ' ').replace(/[\r\n]+/g, ' ').trim();
                     if (!ep.isDead) megaM3U += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
                 });
             });
