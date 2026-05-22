@@ -244,7 +244,7 @@
             </h2>
             <div class="relative w-full sm:w-80">
                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
-                <input type="text" id="searchInput" oninput="filterResults()" placeholder="ค้นหาซีรีส์ที่ดึงมาแล้ว..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition-colors shadow-inner">
+                <input type="text" id="searchInput" oninput="filterResults()" placeholder="ค้นหาซีรีส์, พากย์ไทย, ซับไทย..." class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition-colors shadow-inner">
             </div>
         </div>
 
@@ -429,8 +429,8 @@
         function autoFormatEpisodes(episodes) {
             if (!episodes || episodes.length <= 1) return episodes;
 
-            // เช็คว่าในตอนย่อยมีคำบอก Season อยู่แล้วหรือไม่ ถ้ามีระบบก็จะไม่ยุ่ง
-            const hasExplicitSeason = episodes.some(ep => /(?:SS|Season|ภาค)[\s\.]*\d+/i.test(ep.title));
+            // เช็คว่าในตอนย่อยมีคำบอก Season อยู่แล้วหรือไม่ ถ้ามีระบบก็จะไม่ยุ่ง (เพิ่ม \- เผื่อเว็บใช้ SS-1)
+            const hasExplicitSeason = episodes.some(ep => /(?:SS|Season|ภาค)[\s\.\-]*\d+/i.test(ep.title));
             if (hasExplicitSeason) return episodes;
 
             let ascCount = 0;
@@ -499,10 +499,11 @@
 
             clean = clean.replace(/พากย์ไทย\+ซับไทย|พากย์ไทย|ซับไทย|บรรยายไทย/gi, '');
 
-            const ssMatch = clean.match(/(?:season|ss|ภาค|ปี)[\s\.]*(\d+)/i);
+            // เพิ่ม \- ลงไปใน Regex เผื่อเว็บพิมพ์ว่า SS-1 หรือ Season-2
+            const ssMatch = clean.match(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+)/i);
             if (ssMatch) {
                 tags.push({ text: `Season ${ssMatch[1]}`, type: 'season' });
-                clean = clean.replace(/(?:season|ss|ภาค|ปี)[\s\.]*(\d+)/gi, '');
+                clean = clean.replace(/(?:season|ss|ภาค|ปี)[\s\.\-]*(\d+)/gi, '');
             }
 
             clean = clean.replace(/[\(\)\[\]\-]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -520,11 +521,9 @@
         async function requestWithRetry(url, isJson = false, retries = 3) {
             const proxyInput = document.getElementById('proxyInput').value.trim();
             
-            if (!proxyInput && !url.includes(location.hostname)) {
-                appendLog(`❌ ขัดข้อง: กรุณาระบุ Proxy Endpoint ให้ถูกต้อง`, 'text-rose-500');
-                stopHarvesting();
-                return null;
-            }
+            // ถ้าไม่ได้ใส่ Proxy เราจะให้ fetch ทำงานโดยใช้ URL ตรงๆ ไม่ต้องเอาไปเข้ารหัสต่อท้าย
+            const targetUrl = getSafeUrl(url);
+            const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(targetUrl)) : targetUrl;
 
             for (let i = 0; i < retries; i++) {
                 if (isStopped) return null;
@@ -533,8 +532,7 @@
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
                 
                 try {
-                    const targetUrl = getSafeUrl(url);
-                    const res = await fetch(proxyInput + encodeURIComponent(targetUrl), { signal: controller.signal });
+                    const res = await fetch(fetchUrl, { signal: controller.signal });
                     clearTimeout(timeoutId);
                     
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
@@ -617,7 +615,8 @@
                     const url = await getStream(btn.id);
                     if (url) {
                         triggerSound('tick');
-                        const cleanEpTitle = btn.textContent.trim().replace(/[\r\n]+/g, " ");
+                        // เปลี่ยนจาก /[\r\n]+/g เป็น /[\r\n\s]+/g เพื่อเคลียร์ช่องว่างซ้ำซ้อนในชื่อตอน
+                        const cleanEpTitle = btn.textContent.trim().replace(/[\r\n\s]+/g, " ");
                         return { title: cleanEpTitle, url };
                     }
                     return null;
@@ -656,7 +655,7 @@
             
             if (isStopped) return null;
 
-            // [NEW] ประมวลผลชื่อตอนเพื่อตรวจจับการซ้อนทับของ Season
+            // ประมวลผลชื่อตอนเพื่อตรวจจับการซ้อนทับของ Season
             episodes = autoFormatEpisodes(episodes);
             
             const { cleanTitle, tags } = extractSeriesInfo(rawTitle);
@@ -720,111 +719,119 @@
             const totalPagesToScan = endPage - startPage + 1;
             updateProgress(0, 'เตรียมระบบเชื่อมต่อ...');
 
-            for (let p = startPage; p <= endPage; p++) {
-                if (isStopped) break;
-                
-                const pageUrl = p === 1 ? `${BASE_CAT}${category}/` : `${BASE_CAT}${category}/page/${p}/`;
-                loader.textContent = `🔍 กำลังสแกนหมวดหมู่หน้า ${p}...`;
-                appendLog(`เชื่อมต่อหน้าหมวดหมู่ ${p}: ${pageUrl}`, 'text-slate-400');
-                
-                const catHtml = await requestWithRetry(pageUrl);
-                if (!catHtml) {
-                    appendLog(`ข้ามหน้าที่ ${p} เนื่องจากโหลดล้มเหลว`, 'text-amber-500');
-                    continue;
-                }
-
-                const regex = /href="(?:https?:\/\/[^\/]+)?\/series\/([^"\/]+)\//g;
-                const ids = Array.from(new Set([...catHtml.matchAll(regex)])).map(m => m[1]).filter(i => i !== 'series');
-                
-                if(ids.length === 0) {
-                    updateProgress(((p - startPage + 1) / totalPagesToScan) * 100, `หน้า ${p} ไม่มีข้อมูล`);
-                    appendLog(`⚠️ ไม่พบข้อมูลซีรีส์ในหน้าที่ ${p} (อาจสุดหน้าหมวดหมู่แล้ว) ยุติการสแกนหน้าที่เหลือ`, 'text-amber-500');
-                    break;
-                }
-
-                totalSeriesFound += ids.length;
-                stats.textContent = `กำลังประมวลผลหน้า ${p} (พบการสแกนในรอบนี้ ${totalSeriesFound} เรื่อง)`;
-
-                for (let i = 0; i < ids.length; i++) {
+            // ครอบ Global Try-Catch ป้องกันระบบค้าง (Lock-up) เมื่อเกิด Error ร้ายแรงที่ไม่ได้คาดคิด
+            try {
+                for (let p = startPage; p <= endPage; p++) {
                     if (isStopped) break;
                     
-                    const delay = Math.floor(Math.random() * 1000) + 1000; 
-                    appendLog(`⏱️ พักโหลด ${delay}ms...`, 'text-slate-500');
-                    await sleep(delay);
+                    const pageUrl = p === 1 ? `${BASE_CAT}${category}/` : `${BASE_CAT}${category}/page/${p}/`;
+                    loader.textContent = `🔍 กำลังสแกนหมวดหมู่หน้า ${p}...`;
+                    appendLog(`เชื่อมต่อหน้าหมวดหมู่ ${p}: ${pageUrl}`, 'text-slate-400');
                     
-                    loader.textContent = `⏳ หน้าที่ ${p} | เรื่องที่ ${i+1}/${ids.length}`;
-                    
-                    const baseProgress = ((p - startPage) / totalPagesToScan) * 100;
-                    const pageProgress = ((i + 1) / ids.length) * (100 / totalPagesToScan);
-                    updateProgress(baseProgress + pageProgress, `ดึงข้อมูล: ${ids[i]}`);
-                    
-                    appendLog(`[ดึงข้อมูล]: ${ids[i]}`, 'text-indigo-300');
-                    
-                    const data = await parseSeries(ids[i], p, categoryText);
-                    if (isStopped) break; 
-                    
-                    if (data && data.episodes.length > 0) {
-                        const existingIndex = gatheredSeries.findIndex(s => s.id === data.id);
-                        
-                        if (existingIndex !== -1) {
-                            const existingSeries = gatheredSeries[existingIndex];
-                            if (data.episodes.length >= existingSeries.episodes.length) {
-                                let isNewEpisodes = data.episodes.length > existingSeries.episodes.length;
-                                gatheredSeries[existingIndex] = data;
-                                saveToStorage();
-                                
-                                const oldCard = document.querySelector(`.card[data-id="${data.id}"]`);
-                                const tempContainer = document.createElement('div');
-                                renderCard(data, p, tempContainer); 
-                                
-                                if(oldCard && tempContainer.firstChild) {
-                                    oldCard.parentNode.replaceChild(tempContainer.firstChild, oldCard);
-                                } else {
-                                    renderCard(data, p);
-                                }
-                                
-                                filterResults(); 
+                    const catHtml = await requestWithRetry(pageUrl);
+                    if (!catHtml) {
+                        // เพิ่มการอัปเดตหลอด Progress ป้องกันหลอดค้างหากเว็บล่มบางหน้า
+                        updateProgress(((p - startPage + 1) / totalPagesToScan) * 100, `หน้า ${p} โหลดล้มเหลว ข้ามไปหน้าถัดไป...`);
+                        appendLog(`ข้ามหน้าที่ ${p} เนื่องจากโหลดล้มเหลว`, 'text-amber-500');
+                        continue;
+                    }
 
-                                if (isNewEpisodes) {
-                                    showToast(`อัปเดตตอนใหม่ "${data.cleanTitle}" สำเร็จ!`, 'success');
-                                    appendLog(`🔄 อัปเดตตอนใหม่: "${data.cleanTitle}" (${existingSeries.episodes.length} -> ${data.episodes.length} ตอน)`, 'text-emerald-400');
+                    const regex = /href="(?:https?:\/\/[^\/]+)?\/series\/([^"\/]+)\//g;
+                    const ids = Array.from(new Set([...catHtml.matchAll(regex)])).map(m => m[1]).filter(i => i !== 'series');
+                    
+                    if(ids.length === 0) {
+                        updateProgress(((p - startPage + 1) / totalPagesToScan) * 100, `หน้า ${p} ไม่มีข้อมูล`);
+                        appendLog(`⚠️ ไม่พบข้อมูลซีรีส์ในหน้าที่ ${p} (อาจสุดหน้าหมวดหมู่แล้ว) ยุติการสแกนหน้าที่เหลือ`, 'text-amber-500');
+                        break;
+                    }
+
+                    totalSeriesFound += ids.length;
+                    stats.textContent = `กำลังประมวลผลหน้า ${p} (พบการสแกนในรอบนี้ ${totalSeriesFound} เรื่อง)`;
+
+                    for (let i = 0; i < ids.length; i++) {
+                        if (isStopped) break;
+                        
+                        const delay = Math.floor(Math.random() * 1000) + 1000; 
+                        appendLog(`⏱️ พักโหลด ${delay}ms...`, 'text-slate-500');
+                        await sleep(delay);
+                        
+                        loader.textContent = `⏳ หน้าที่ ${p} | เรื่องที่ ${i+1}/${ids.length}`;
+                        
+                        const baseProgress = ((p - startPage) / totalPagesToScan) * 100;
+                        const pageProgress = ((i + 1) / ids.length) * (100 / totalPagesToScan);
+                        updateProgress(baseProgress + pageProgress, `ดึงข้อมูล: ${ids[i]}`);
+                        
+                        appendLog(`[ดึงข้อมูล]: ${ids[i]}`, 'text-indigo-300');
+                        
+                        const data = await parseSeries(ids[i], p, categoryText);
+                        if (isStopped) break; 
+                        
+                        if (data && data.episodes.length > 0) {
+                            const existingIndex = gatheredSeries.findIndex(s => s.id === data.id);
+                            
+                            if (existingIndex !== -1) {
+                                const existingSeries = gatheredSeries[existingIndex];
+                                if (data.episodes.length >= existingSeries.episodes.length) {
+                                    let isNewEpisodes = data.episodes.length > existingSeries.episodes.length;
+                                    gatheredSeries[existingIndex] = data;
+                                    saveToStorage();
+                                    
+                                    const oldCard = document.querySelector(`.card[data-id="${data.id}"]`);
+                                    const tempContainer = document.createElement('div');
+                                    renderCard(data, p, tempContainer); 
+                                    
+                                    if(oldCard && tempContainer.firstChild) {
+                                        oldCard.parentNode.replaceChild(tempContainer.firstChild, oldCard);
+                                    } else {
+                                        renderCard(data, p);
+                                    }
+                                    
+                                    filterResults(); 
+
+                                    if (isNewEpisodes) {
+                                        showToast(`อัปเดตตอนใหม่ "${data.cleanTitle}" สำเร็จ!`, 'success');
+                                        appendLog(`🔄 อัปเดตตอนใหม่: "${data.cleanTitle}" (${existingSeries.episodes.length} -> ${data.episodes.length} ตอน)`, 'text-emerald-400');
+                                    } else {
+                                        appendLog(`🔄 อัปเดตลิงก์วิดีโอให้สดใหม่: "${data.cleanTitle}"`, 'text-blue-400');
+                                    }
                                 } else {
-                                    appendLog(`🔄 อัปเดตลิงก์วิดีโอให้สดใหม่: "${data.cleanTitle}"`, 'text-blue-400');
+                                    appendLog(`⏭️ "${data.cleanTitle}" มีข้อมูลล่าสุดอยู่แล้ว (ข้าม)`, 'text-slate-500');
                                 }
                             } else {
-                                appendLog(`⏭️ "${data.cleanTitle}" มีข้อมูลล่าสุดอยู่แล้ว (ข้าม)`, 'text-slate-500');
+                                gatheredSeries.push(data);
+                                renderCard(data, p);
+                                saveToStorage(); 
+                                
+                                filterResults(); 
+                                showToast(`ดึง "${data.cleanTitle}" สำเร็จ!`, 'success');
                             }
-                        } else {
-                            gatheredSeries.push(data);
-                            renderCard(data, p);
-                            saveToStorage(); 
-                            
-                            filterResults(); 
-                            showToast(`ดึง "${data.cleanTitle}" สำเร็จ!`, 'success');
                         }
                     }
                 }
-            }
+            } catch (err) {
+                appendLog(`❌ เกิดข้อผิดพลาดร้ายแรงระหว่างสแกน: ${err.message}`, 'text-rose-500 font-bold');
+                showToast('พบข้อผิดพลาดร้ายแรง โปรดตรวจสอบหน้าต่างประวัติการทำงาน', 'error');
+            } finally {
+                activeHarvest = false;
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping";
+                const totalEps = gatheredSeries.reduce((sum, s) => sum + s.episodes.length, 0);
+                
+                if (isStopped) {
+                    updateProgress(0, 'ยกเลิกกระบวนการ');
+                    loader.textContent = `⏹ หยุดทำงานชั่วคราว`;
+                    stats.textContent = `รอคำสั่งใหม่จากผู้ใช้`;
+                    appendLog(`⏹ ยกเลิกการทำงาน ข้อมูลปัจจุบัน ${gatheredSeries.length} เรื่อง รวม ${totalEps} ตอน`, 'text-rose-400');
+                } else {
+                    updateProgress(100, 'ประมวลผลเสร็จสิ้น');
+                    loader.textContent = `✅ สำเร็จเสร็จสิ้น!`;
+                    stats.textContent = `ดึงข้อมูลครบทุกหน้ากระบวนการแล้ว`;
+                    appendLog(`✅ สแกนสมบูรณ์ มีข้อมูล ${gatheredSeries.length} เรื่อง รวม ${totalEps} ตอน`, 'text-emerald-400 font-bold');
+                    triggerSound('done');
+                }
 
-            activeHarvest = false;
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping";
-            const totalEps = gatheredSeries.reduce((sum, s) => sum + s.episodes.length, 0);
-            
-            if (isStopped) {
-                updateProgress(0, 'ยกเลิกกระบวนการ');
-                loader.textContent = `⏹ หยุดทำงานชั่วคราว`;
-                stats.textContent = `รอคำสั่งใหม่จากผู้ใช้`;
-                appendLog(`⏹ ยกเลิกการทำงาน ข้อมูลปัจจุบัน ${gatheredSeries.length} เรื่อง รวม ${totalEps} ตอน`, 'text-rose-400');
-            } else {
-                updateProgress(100, 'ประมวลผลเสร็จสิ้น');
-                loader.textContent = `✅ สำเร็จเสร็จสิ้น!`;
-                stats.textContent = `ดึงข้อมูลครบทุกหน้ากระบวนการแล้ว`;
-                appendLog(`✅ สแกนสมบูรณ์ มีข้อมูล ${gatheredSeries.length} เรื่อง รวม ${totalEps} ตอน`, 'text-emerald-400 font-bold');
-                triggerSound('done');
+                updateGlobalActions();
+                resetControlsState();
             }
-
-            updateGlobalActions();
-            resetControlsState();
         }
 
         function stopHarvesting() {
@@ -883,14 +890,19 @@
 
             const card = document.createElement("div");
             card.className = "card bg-slate-800 rounded-2xl overflow-hidden border border-slate-700/60 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/50 flex flex-col group";
+            
+            // เพิ่ม data-search เพื่อให้ค้นหาจาก ป้ายกำกับ(Tags) ซับไทย/พากย์ไทย/Season ได้ด้วย
+            const tagString = data.tags ? data.tags.map(t => t.text).join(' ') : '';
+            const searchKeywords = `${data.title} ${data.cleanTitle} ${tagString}`.toLowerCase();
             card.setAttribute('data-title', data.title.toLowerCase());
+            card.setAttribute('data-search', searchKeywords);
             card.setAttribute('data-id', data.id); 
             
             let groups = {};
             let currentGroupName = "รายการตอนทั้งหมด";
             
             data.episodes.forEach(ep => {
-                const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.]*(\d+)/i);
+                const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.\-]*(\d+)/i);
                 if (ssMatch) {
                     currentGroupName = `Season ${ssMatch[1]}`;
                 }
@@ -908,7 +920,7 @@
                 groupNames.forEach(gName => {
                     optionsHtml += `<optgroup label="📺 ${escapeHTML(gName)}">`;
                     groups[gName].forEach(ep => {
-                        let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.]*\d+[\s\-\:]*/i, '').trim();
+                        let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+[\s\-\:]*/i, '').trim();
                         if(!cleanEpTitle) cleanEpTitle = ep.title; 
                         optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(cleanEpTitle)}</option>`;
                     });
@@ -989,8 +1001,9 @@
             let visibleCount = 0;
             
             cards.forEach(card => {
-                const title = card.getAttribute('data-title');
-                if (title.includes(term)) {
+                // เปลี่ยนไปค้นหาจาก data-search เพื่อรองรับการสแกนหา ป้ายกำกับ(Tags) ด้วย
+                const searchStr = card.getAttribute('data-search') || card.getAttribute('data-title');
+                if (searchStr.includes(term)) {
                     card.classList.remove('hidden');
                     visibleCount++;
                 } else {
