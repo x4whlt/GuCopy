@@ -303,17 +303,33 @@
         </div>
     </div>
 
-    <!-- Custom Confirm Modal -->
-    <div id="confirmModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 hidden opacity-0 transition-opacity duration-300">
-        <div class="bg-slate-900 rounded-2xl border border-slate-700 max-w-sm w-full p-6 shadow-2xl transform scale-95 transition-transform duration-300">
-            <div class="flex items-center gap-3 mb-4">
-                <i id="confirmIcon" class="fa-solid fa-triangle-exclamation text-amber-500 text-2xl"></i>
-                <h3 id="confirmTitle" class="text-lg font-bold text-white">ยืนยันการทำรายการ</h3>
+    <!-- Built-in Video Stream Player Modal -->
+    <div id="playerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 hidden transition-opacity duration-300">
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 max-w-4xl w-full overflow-hidden shadow-2xl relative">
+            <div class="flex justify-between items-center p-4 border-b border-slate-800">
+                <div>
+                    <h3 id="modalTitle" class="font-bold text-white text-base md:text-lg">ทดลองเล่นสตรีมวิดีโอ</h3>
+                    <p id="modalSubtitle" class="text-xs text-slate-400">กำลังสตรีมลิงก์วิดีโอ (.m3u8)</p>
+                </div>
+                <button onclick="closePlayer()" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
-            <p id="confirmMessage" class="text-slate-300 text-sm mb-6 leading-relaxed">คุณแน่ใจหรือไม่?</p>
-            <div class="flex justify-end gap-3">
-                <button id="btnConfirmCancel" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-semibold transition-colors">ยกเลิก</button>
-                <button id="btnConfirmOk" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors">ตกลง</button>
+            <div class="aspect-video bg-black relative flex items-center justify-center">
+                <video id="hlsPlayer" controls class="w-full h-full object-contain hidden"></video>
+                <div id="videoPlaceholder" class="text-center p-6">
+                    <i class="fa-solid fa-compact-disc text-blue-500 text-5xl animate-spin mb-3"></i>
+                    <p class="text-slate-400 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีมสด...</p>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-950/80 border-t border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                <div class="w-full overflow-hidden">
+                    <p class="text-[11px] font-mono text-slate-500 uppercase">Stream URL Path</p>
+                    <p id="modalStreamUrl" class="text-xs font-mono text-emerald-400 break-all select-all pr-2"></p>
+                </div>
+                <button onclick="copyStreamUrl()" class="shrink-0 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-copy"></i> คัดลอกลิงก์
+                </button>
             </div>
         </div>
     </div>
@@ -321,8 +337,25 @@
     <!-- Toast Notification Custom Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
 
+    <!-- Custom Confirm Modal (แทนที่ confirm ดั้งเดิม) -->
+    <div id="confirmModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+        <div class="bg-slate-900 rounded-2xl border border-slate-700 max-w-sm w-full p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="confirmBox">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 border border-amber-500/30">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-100">ยืนยันการดำเนินการ</h3>
+            </div>
+            <p id="confirmMessage" class="text-sm text-slate-300 mb-6 leading-relaxed"></p>
+            <div class="flex justify-end gap-3">
+                <button id="btnConfirmCancel" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold border border-slate-700 transition-colors">ยกเลิก</button>
+                <button id="btnConfirmOk" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold shadow-lg shadow-rose-500/20 transition-colors">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // ตั้งค่า LocalForage สำหรับ IndexedDB (สเกลเก็บข้อมูลได้ไม่อั้น)
+        // ตั้งค่า LocalForage สำหรับ IndexedDB
         localforage.config({
             name: 'SeriesHarvesterPro',
             storeName: 'series_data'
@@ -333,50 +366,8 @@
         let isStopped = false;
         let gatheredSeries = []; 
         let storageFullFlag = false; 
-        let activeControllers = new Set(); // สำหรับจัดการและยกเลิก Network Request แบบทันที
+        let globalAbortController = null; // สำหรับยกเลิกการเชื่อมต่อทันที
         
-        // --- Custom Confirm Modal Helper ---
-        function showConfirm(title, message, type = 'warning') {
-            return new Promise((resolve) => {
-                const modal = document.getElementById('confirmModal');
-                const modalInner = modal.querySelector('div');
-                document.getElementById('confirmTitle').textContent = title;
-                document.getElementById('confirmMessage').textContent = message;
-
-                const icon = document.getElementById('confirmIcon');
-                if (type === 'danger') {
-                    icon.className = 'fa-solid fa-triangle-exclamation text-rose-500 text-2xl';
-                    document.getElementById('btnConfirmOk').className = 'px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-sm font-semibold transition-colors';
-                } else if (type === 'info') {
-                    icon.className = 'fa-solid fa-circle-info text-blue-500 text-2xl';
-                    document.getElementById('btnConfirmOk').className = 'px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors';
-                } else {
-                    icon.className = 'fa-solid fa-triangle-exclamation text-amber-500 text-2xl';
-                    document.getElementById('btnConfirmOk').className = 'px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-semibold transition-colors';
-                }
-
-                modal.classList.remove('hidden');
-                // trigger reflow
-                void modal.offsetWidth;
-                modal.classList.remove('opacity-0');
-                modalInner.classList.remove('scale-95');
-
-                const cleanup = () => {
-                    modal.classList.add('opacity-0');
-                    modalInner.classList.add('scale-95');
-                    setTimeout(() => modal.classList.add('hidden'), 300);
-                    document.getElementById('btnConfirmCancel').removeEventListener('click', onCancel);
-                    document.getElementById('btnConfirmOk').removeEventListener('click', onOk);
-                };
-
-                const onCancel = () => { cleanup(); resolve(false); };
-                const onOk = () => { cleanup(); resolve(true); };
-
-                document.getElementById('btnConfirmCancel').addEventListener('click', onCancel);
-                document.getElementById('btnConfirmOk').addEventListener('click', onOk);
-            });
-        }
-
         // --- ระบบเสียงและ Toast ---
         let audioCtx = null;
         function getAudioContext() {
@@ -430,6 +421,41 @@
             });
         }
 
+        // --- ระบบ Custom Confirm Modal (แทนที่ confirm ของ Browser) ---
+        function showConfirm(message) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('confirmModal');
+                const box = document.getElementById('confirmBox');
+                const msgEl = document.getElementById('confirmMessage');
+                const btnOk = document.getElementById('btnConfirmOk');
+                const btnCancel = document.getElementById('btnConfirmCancel');
+
+                msgEl.textContent = message;
+                modal.classList.remove('hidden');
+                void modal.offsetWidth; // Trigger reflow
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+
+                const closeModal = (result) => {
+                    modal.classList.add('opacity-0');
+                    box.classList.add('scale-95');
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        resolve(result);
+                    }, 300);
+                    
+                    btnOk.removeEventListener('click', onOk);
+                    btnCancel.removeEventListener('click', onCancel);
+                };
+
+                const onOk = () => closeModal(true);
+                const onCancel = () => closeModal(false);
+
+                btnOk.addEventListener('click', onOk);
+                btnCancel.addEventListener('click', onCancel);
+            });
+        }
+
         function appendLog(text, colorClass = 'text-slate-300') {
             const terminal = document.getElementById('terminal');
             const time = new Date().toLocaleTimeString();
@@ -449,8 +475,12 @@
             const bar = document.getElementById('progressBar');
             const text = document.getElementById('progressText');
             const detail = document.getElementById('progressDetail');
-            // ป้องกันค่า NaN ทำให้หลอดโหลดและ CSS พัง
-            let p = (isNaN(percent) ? 0 : Math.min(Math.max(percent, 0), 100)).toFixed(1);
+            
+            // ป้องกันบั๊ก NaN หลอดโหลดพัง
+            let validPercent = percent;
+            if (isNaN(validPercent) || !isFinite(validPercent)) validPercent = 0;
+            
+            let p = Math.min(Math.max(validPercent, 0), 100).toFixed(1);
             bar.style.width = p + '%';
             text.textContent = p + '%';
             if(detailText) detail.textContent = detailText;
@@ -465,6 +495,113 @@
             input.value = val;
         }
 
+        // --- ระบบ Storage & JSON Sync ---
+        async function saveToStorage() {
+            try {
+                await localforage.setItem('harvesterData', gatheredSeries);
+                storageFullFlag = false; 
+            } catch (e) {
+                if (!storageFullFlag) {
+                    showToast('พื้นที่จัดเก็บเต็ม หรือเกิดข้อผิดพลาดฐานข้อมูล', 'error');
+                    appendLog('❌ ไม่สามารถบันทึกข้อมูลได้ IndexedDB เต็มหรือพัง!', 'text-rose-500 font-bold');
+                    storageFullFlag = true;
+                }
+            }
+        }
+
+        async function clearData() {
+            if(activeHarvest) { showToast('ไม่สามารถล้างข้อมูลในขณะที่กำลังสแกน!', 'error'); return; }
+            const isConfirmed = await showConfirm('คุณต้องการลบข้อมูลซีรีส์ที่ดึงมาแล้วทั้งหมด (ล้างฐานข้อมูล) ใช่หรือไม่?');
+            if(isConfirmed) {
+                await localforage.removeItem('harvesterData');
+                gatheredSeries = [];
+                refreshOutput();
+                showToast('ล้างฐานข้อมูลสำเร็จ!', 'success');
+                appendLog('[SYSTEM] ล้างข้อมูลใน IndexedDB เรียบร้อยแล้ว', 'text-amber-400');
+                storageFullFlag = false;
+            }
+        }
+
+        function refreshOutput() {
+            document.getElementById('output').innerHTML = '';
+            gatheredSeries.forEach(data => renderCard(data, data.pageNum || 'Offline'));
+            filterResults();
+            updateGlobalActions();
+        }
+
+        function exportJSON() {
+            if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้ส่งออก", "error"); return; }
+            const dataStr = JSON.stringify(gatheredSeries, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `harvester-backup-${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("ส่งออกข้อมูล JSON แล้ว!", "success");
+            appendLog(`[SYSTEM] 📤 ส่งออกฐานข้อมูล JSON สำเร็จ`, 'text-emerald-400');
+        }
+
+        function importJSON(event) {
+            if(activeHarvest) { showToast("โปรดหยุดสแกนก่อนนำเข้าข้อมูล", "error"); return; }
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (Array.isArray(data)) {
+                        let newAdded = 0, updated = 0;
+                        data.forEach(importedItem => {
+                            // ดักเช็คโครงสร้าง Object ป้องกันนำเข้าไฟล์มั่วจนเว็บพัง
+                            if (!importedItem || !importedItem.id || !Array.isArray(importedItem.episodes)) return;
+                            
+                            const existingIdx = gatheredSeries.findIndex(s => s.id === importedItem.id);
+                            if (existingIdx === -1) {
+                                gatheredSeries.push(importedItem); newAdded++;
+                            } else if (importedItem.episodes.length > gatheredSeries[existingIdx].episodes.length) {
+                                gatheredSeries[existingIdx] = importedItem; updated++;
+                            }
+                        });
+                        await saveToStorage();
+                        refreshOutput();
+                        showToast(`นำเข้าสำเร็จ! เพิ่ม ${newAdded} และ อัปเดต ${updated} เรื่อง`, "success");
+                        appendLog(`📥 นำเข้า JSON: เพิ่มใหม่ ${newAdded} เรื่อง, อัปเดต ${updated} เรื่อง`, "text-emerald-400");
+                    } else {
+                        showToast("ไฟล์ JSON ไม่ถูกต้อง หรือพัง!", "error");
+                    }
+                } catch (err) { showToast("ไฟล์ JSON ไม่ถูกต้อง หรือพัง!", "error"); }
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const saved = await localforage.getItem('harvesterData');
+                if (saved && saved.length > 0) {
+                    gatheredSeries = saved;
+                    appendLog(`[SYSTEM] 💾 กู้คืนข้อมูลเซสชันล่าสุด ${gatheredSeries.length} เรื่องจาก IndexedDB`, 'text-emerald-400');
+                    refreshOutput();
+                    showToast('โหลดฐานข้อมูลสำเร็จ', 'info');
+                }
+            } catch (e) { console.warn('Failed to parse localForage data'); }
+        });
+
+        // --- รองรับการกด ESC เพื่อปิดหน้าต่าง (UX Polish) ---
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const playerModal = document.getElementById('playerModal');
+                const confirmModal = document.getElementById('confirmModal');
+                if (playerModal && !playerModal.classList.contains('hidden')) closePlayer();
+                if (confirmModal && !confirmModal.classList.contains('hidden')) {
+                    const btnCancel = document.getElementById('btnConfirmCancel');
+                    if(btnCancel) btnCancel.click();
+                }
+            }
+        });
+
         // --- ระบบ Checkbox เลือกหมวดหมู่ UI Sync ---
         document.querySelectorAll('.cat-checkbox').forEach(cb => {
             cb.addEventListener('change', function() {
@@ -472,7 +609,6 @@
                 if (this.checked) icon.classList.remove('opacity-0');
                 else icon.classList.add('opacity-0');
             });
-            // trigger init state
             if (cb.checked) cb.nextElementSibling.querySelector('.fa-check').classList.remove('opacity-0');
         });
 
@@ -547,20 +683,22 @@
 
             for (let i = 0; i < retries; i++) {
                 if (isStopped) return null;
-                const controller = new AbortController();
-                activeControllers.add(controller); // บันทึก controller เพื่อรอคำสั่ง Stop
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                globalAbortController = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    if (globalAbortController) globalAbortController.abort();
+                }, 10000);
+                
                 try {
-                    const res = await fetch(fetchUrl, { signal: controller.signal });
-                    activeControllers.delete(controller);
+                    const res = await fetch(fetchUrl, { signal: globalAbortController.signal });
                     clearTimeout(timeoutId);
+                    if (res.status === 404) return "404_NOT_FOUND"; // Custom response to bypass loop
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
                     return isJson ? await res.json() : await res.text();
                 } catch (e) {
-                    activeControllers.delete(controller);
                     clearTimeout(timeoutId);
+                    if (isStopped) return null;
                     const isTimeout = e.name === 'AbortError';
-                    if (isStopped) return null; // ดักผู้ใช้กดหยุด ไม่ต้องแจ้งเตือน Error
                     const errMsg = isTimeout ? 'Server Timeout' : e.message;
                     if (i === retries - 1) {
                         appendLog(`❌ ล้มเหลว (รอบ ${retries}): ${errMsg}`, 'text-rose-500');
@@ -573,103 +711,6 @@
             return null;
         }
 
-        // --- ระบบ Storage & JSON Sync ---
-        async function saveToStorage() {
-            try {
-                await localforage.setItem('harvesterData', gatheredSeries);
-                storageFullFlag = false; 
-            } catch (e) {
-                if (!storageFullFlag) {
-                    showToast('พื้นที่จัดเก็บเต็ม หรือเกิดข้อผิดพลาดฐานข้อมูล', 'error');
-                    appendLog('❌ ไม่สามารถบันทึกข้อมูลได้ IndexedDB เต็มหรือพัง!', 'text-rose-500 font-bold');
-                    storageFullFlag = true;
-                }
-            }
-        }
-
-        async function clearData() {
-            if(activeHarvest) { showToast('ไม่สามารถล้างข้อมูลในขณะที่กำลังสแกน!', 'error'); return; }
-            
-            const isConfirmed = await showConfirm('ยืนยันการล้างข้อมูล', 'คุณต้องการลบข้อมูลซีรีส์ที่ดึงมาแล้วทั้งหมด (ล้างฐานข้อมูล) ใช่หรือไม่?', 'danger');
-            
-            if(isConfirmed) {
-                await localforage.removeItem('harvesterData');
-                gatheredSeries = [];
-                refreshOutput();
-                showToast('ล้างฐานข้อมูลสำเร็จ!', 'success');
-                appendLog('[SYSTEM] ล้างข้อมูลใน IndexedDB เรียบร้อยแล้ว', 'text-amber-400');
-                storageFullFlag = false;
-            }
-        }
-
-        function refreshOutput() {
-            document.getElementById('output').innerHTML = '';
-            gatheredSeries.forEach(data => renderCard(data, data.pageNum || 'Offline'));
-            filterResults();
-            updateGlobalActions();
-        }
-
-        function exportJSON() {
-            if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้ส่งออก", "error"); return; }
-            const dataStr = JSON.stringify(gatheredSeries, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `harvester-backup-${new Date().toISOString().slice(0,10)}.json`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast("ส่งออกข้อมูล JSON แล้ว!", "success");
-            appendLog(`[SYSTEM] 📤 ส่งออกฐานข้อมูล JSON สำเร็จ`, 'text-emerald-400');
-        }
-
-        function importJSON(event) {
-            if(activeHarvest) { showToast("โปรดหยุดสแกนก่อนนำเข้าข้อมูล", "error"); return; }
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (Array.isArray(data)) {
-                        let newAdded = 0, updated = 0;
-                        data.forEach(importedItem => {
-                            // แก้ไขบั๊ก: เพิ่มการตรวจสอบโครงสร้าง Object ให้รัดกุม ป้องกันเว็บพังจากไฟล์ JSON เสีย
-                            if (!importedItem || !importedItem.id || !Array.isArray(importedItem.episodes)) return;
-                            
-                            const existingIdx = gatheredSeries.findIndex(s => s.id === importedItem.id);
-                            if (existingIdx === -1) {
-                                gatheredSeries.push(importedItem); newAdded++;
-                            } else if (importedItem.episodes.length > gatheredSeries[existingIdx].episodes.length) {
-                                gatheredSeries[existingIdx] = importedItem; updated++;
-                            }
-                        });
-                        await saveToStorage();
-                        refreshOutput();
-                        showToast(`นำเข้าสำเร็จ! เพิ่ม ${newAdded} และ อัปเดต ${updated} เรื่อง`, "success");
-                        appendLog(`📥 นำเข้า JSON: เพิ่มใหม่ ${newAdded} เรื่อง, อัปเดต ${updated} เรื่อง`, "text-emerald-400");
-                    } else {
-                        showToast("ไฟล์ JSON ไม่ถูกต้อง หรือพัง!", "error");
-                    }
-                } catch (err) { showToast("ไฟล์ JSON ไม่ถูกต้อง หรือพัง!", "error"); }
-                event.target.value = ''; 
-            };
-            reader.readAsText(file);
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const saved = await localforage.getItem('harvesterData');
-                if (saved && saved.length > 0) {
-                    gatheredSeries = saved;
-                    appendLog(`[SYSTEM] 💾 กู้คืนข้อมูลเซสชันล่าสุด ${gatheredSeries.length} เรื่องจาก IndexedDB`, 'text-emerald-400');
-                    refreshOutput();
-                    showToast('โหลดฐานข้อมูลสำเร็จ', 'info');
-                }
-            } catch (e) { console.warn('Failed to parse localForage data'); }
-        });
-
-        // --- ระบบสแกนข้อมูล ---
         async function processEpisodesConcurrently(buttons, limit) {
             let episodes = [];
             for (let i = 0; i < buttons.length; i += limit) {
@@ -678,6 +719,7 @@
                 appendLog(`⏳ ดึงลิงก์แบบขนานตอนที่ ${i+1} ถึง ${Math.min(i+limit, buttons.length)}...`, 'text-indigo-400');
                 
                 const promises = chunk.map(async (btn) => {
+                    await sleep(Math.random() * 500); // สุ่มหน่วงเวลาหลอกระบบ (Anti-ban)
                     const url = await getStream(btn.id);
                     if (url) {
                         triggerSound('tick');
@@ -689,16 +731,14 @@
                 
                 const results = await Promise.all(promises);
                 episodes.push(...results.filter(r => r !== null));
-                
-                // ป้องกันโดน Server บล็อก (Rate Limit / 429)
-                if (i + limit < buttons.length) await sleep(500 + Math.random() * 500); 
+                if (i + limit < buttons.length) await sleep(500); 
             }
             return episodes;
         }
 
         async function getStream(postId) {
             const json = await requestWithRetry(`https://kubhd24.net/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`, true);
-            if (!json?.success || !json.player) return null;
+            if (!json || json === "404_NOT_FOUND" || !json.success || !json.player) return null;
             const match = json.player.match(/data-src="([^"]+)"/);
             if (!match) return null;
             return `https://media.vdohls.com/${match[1].split('/').pop()}/playlist.m3u8`;
@@ -706,7 +746,7 @@
 
         async function parseSeries(id, pageNum, categoryText) {
             const html = await requestWithRetry(`https://kubhd24.net/series/${id}/`);
-            if (!html) return null;
+            if (!html || html === "404_NOT_FOUND") return null;
             const doc = new DOMParser().parseFromString(html, "text/html");
             const rawTitle = doc.querySelector("h1")?.textContent.trim() || id;
             let poster = doc.querySelector("img.wp-post-image")?.getAttribute("data-src") || 
@@ -730,7 +770,6 @@
             if (activeHarvest) return;
             getAudioContext(); 
 
-            // รวบรวมหมวดหมู่ที่เลือก (Multi-Category Queue)
             const checkboxes = document.querySelectorAll('#categoryCheckboxes input[type="checkbox"]:checked');
             if (checkboxes.length === 0) {
                 showToast('กรุณาติ๊กเลือกหมวดหมู่อย่างน้อย 1 รายการ!', 'error');
@@ -785,9 +824,18 @@
                         appendLog(`เชื่อมต่อหน้า: ${pageUrl}`, 'text-slate-400');
                         
                         const catHtml = await requestWithRetry(pageUrl);
+                        
+                        // ระบบ Bypass 404
+                        if (catHtml === "404_NOT_FOUND") {
+                            updateProgress((globalPageCounter / totalPagesToScan) * 100, `ไม่พบหน้า ${p}`);
+                            appendLog(`⚠️ ไม่พบหน้าเว็บ (404) - ข้ามหมวดหมู่นี้`, 'text-amber-500');
+                            globalPageCounter += (endPage - p); // Skip remaining counter for this cat
+                            break; 
+                        }
+
                         if (!catHtml) {
                             updateProgress((globalPageCounter / totalPagesToScan) * 100, `ข้ามหน้า ${p}`);
-                            appendLog(`ข้ามหน้าเนื่องจากโหลดล้มเหลว`, 'text-amber-500');
+                            if(!isStopped) appendLog(`ข้ามหน้าเนื่องจากโหลดล้มเหลว`, 'text-amber-500');
                             continue;
                         }
 
@@ -797,7 +845,7 @@
                         if(ids.length === 0) {
                             updateProgress((globalPageCounter / totalPagesToScan) * 100, `ไม่พบข้อมูลในหน้า ${p}`);
                             appendLog(`⚠️ ไม่พบข้อมูลซีรีส์ (จบหมวดหมู่) ย้ายไปคิวถัดไป`, 'text-amber-500');
-                            globalPageCounter += (endPage - p); // Skip remaining counter for this cat
+                            globalPageCounter += (endPage - p); 
                             break; 
                         }
 
@@ -887,18 +935,23 @@
                 series.episodes.forEach(ep => { allEps.push({ series, ep }); });
             });
 
-            // ดักจับกรณีฐานข้อมูลมีเรื่อง แต่ตอนย่อยพัง (ป้องกันหลอดโหลดพังเป็น NaN)
             if (allEps.length === 0) {
                 showToast('ไม่พบรายการตอนย่อยให้ตรวจสอบ', 'error');
                 return;
             }
 
-            const isConfirmed = await showConfirm('ยืนยันการตรวจสอบ', 'การสแกนเช็กลิงก์เสียทั้งหมด อาจใช้เวลาสักพัก ขึ้นอยู่กับจำนวนตอนทั้งหมด ต้องการเริ่มหรือไม่?', 'info');
+            const isConfirmed = await showConfirm('การสแกนเช็กลิงก์เสียทั้งหมด อาจใช้เวลาสักพัก ขึ้นอยู่กับจำนวนตอนทั้งหมด ต้องการเริ่มหรือไม่?');
             if (!isConfirmed) return;
             
             activeHarvest = true; isStopped = false;
+            
+            // ล็อคปุ่มทุกอย่างป้องกันการกวนระบบ
             document.getElementById('btnStart').disabled = true;
             document.getElementById('btnStop').disabled = false;
+            document.getElementById('speedSelect').disabled = true;
+            document.getElementById('proxyInput').disabled = true;
+            document.getElementById('startPage').disabled = true;
+            document.getElementById('endPage').disabled = true;
             document.querySelectorAll('.cat-checkbox, #btnClearCache, #btnVerify').forEach(el => el.disabled = true);
             
             appendLog(`[SYSTEM] 🏥 เริ่มตรวจสอบสุขภาพลิงก์ทั้งหมด...`, 'text-indigo-400 font-bold');
@@ -911,24 +964,22 @@
                 const chunk = allEps.slice(i, i + limit);
                 
                 await Promise.all(chunk.map(async (item) => {
-                    const controller = new AbortController();
-                    activeControllers.add(controller);
                     try {
                         const proxyInput = document.getElementById('proxyInput').value.trim();
                         const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(getSafeUrl(item.ep.url))) : getSafeUrl(item.ep.url);
                         
-                        const timeoutId = setTimeout(() => controller.abort(), 8000); 
-                        // ยิงแบบ GET และรีบยกเลิกเมื่อจับ Header ได้ เพื่อประหยัดเน็ตเวิร์ค
-                        const checkRes = await fetch(fetchUrl, { method: 'GET', signal: controller.signal });
-                        clearTimeout(timeoutId);
-                        controller.abort(); 
-                        activeControllers.delete(controller);
+                        globalAbortController = new AbortController();
+                        const timeoutId = setTimeout(() => {
+                            if (globalAbortController) globalAbortController.abort();
+                        }, 8000); 
+                        
+                        const checkRes = await fetch(fetchUrl, { method: 'GET', signal: globalAbortController.signal });
+                        if (globalAbortController) globalAbortController.abort(); 
                         
                         if (!checkRes.ok && checkRes.status !== 405) { item.ep.isDead = true; deadCount++; } 
                         else { item.ep.isDead = false; }
                     } catch (e) {
-                        activeControllers.delete(controller);
-                        if (!isStopped) { item.ep.isDead = true; deadCount++; } // ไม่นับว่าพังถ้าผู้ใช้กด Stop เอง
+                        item.ep.isDead = true; deadCount++;
                     }
                     checked++;
                 }));
@@ -952,12 +1003,10 @@
         function stopHarvesting() {
             if (!activeHarvest) return;
             isStopped = true;
-            
-            // สังหาร (Abort) ทุก Network Request ที่กำลังทำงานอยู่ทันที 
-            activeControllers.forEach(c => c.abort());
-            activeControllers.clear();
-
-            appendLog(`[SYSTEM] กำลังส่งคำสั่งหยุดการทำงาน...`, 'text-rose-500');
+            appendLog(`[SYSTEM] กำลังส่งคำสั่งหยุดการทำงานและตัดการเชื่อมต่อ...`, 'text-rose-500');
+            if (globalAbortController) {
+                globalAbortController.abort();
+            }
             document.getElementById('btnStop').disabled = true;
             document.getElementById('btnStop').textContent = "กำลังหยุด...";
         }
@@ -982,31 +1031,49 @@
             const countBadge = document.getElementById('countBadge');
             
             countBadge.textContent = `${gatheredSeries.length} เรื่อง`;
-            if (gatheredSeries.length > 0) {
-                container.classList.remove('hidden'); emptyState.classList.add('hidden');
+            
+            // ใช้ตัวแปรตรวจเช็คการ Filter เพื่อให้ UI EmptyState ลิ้งค์ตรงตามผลลัพธ์
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            let visibleCount = 0;
+            if (term) {
+                visibleCount = Array.from(document.querySelectorAll('#output > .card:not(.hidden)')).length;
             } else {
-                container.classList.add('hidden'); emptyState.classList.remove('hidden');
+                visibleCount = gatheredSeries.length;
+            }
+
+            if (gatheredSeries.length > 0) {
+                container.classList.remove('hidden'); 
+            } else {
+                container.classList.add('hidden'); 
+            }
+            
+            if (visibleCount === 0 && gatheredSeries.length > 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.innerHTML = `<i class="fa-solid fa-magnifying-glass text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ไม่พบซีรีส์ที่ค้นหา</h3><p class="text-sm text-slate-600 mt-1">ลองใช้คีย์เวิร์ดอื่น</p>`;
+            } else if (visibleCount === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.innerHTML = `<i class="fa-solid fa-layer-group text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลที่จะแสดงผล</h3><p class="text-sm text-slate-600 max-w-sm mx-auto mt-1">ตั้งค่าช่วงหน้าเว็บและคลิกปุ่มสแกนข้อมูลด้านบนเพื่อรับรายการคอนเทนต์</p>`;
+            } else {
+                emptyState.classList.add('hidden');
             }
         }
 
         function renderCard(data, pageNum, targetContainer = null) {
             let m3u = "\uFEFF#EXTM3U\n";
             const groupName = data.categoryText || "ซีรีส์ทั่วไป";
-            // ป้องกันช่องโหว่ M3U พังจากการปัดบรรทัด (\n) ใน Title หรือ Poster
-            const safeTitle = data.title.replace(/[\r\n]+/g, ' ').replace(/"/g, "'");
-            const safeGroupName = groupName.replace(/[\r\n]+/g, ' ').replace(/"/g, "'");
-            const safePoster = data.poster.replace(/[\r\n]+/g, '').replace(/"/g, "'");
+            // ป้องกัน M3U เสียหายจากการเว้นบรรทัด
+            const safeTitle = data.title.replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
+            const safeGroupName = groupName.replace(/"/g, "'");
+            const safePoster = data.poster.replace(/"/g, "'");
 
             let activeEpsCount = 0;
             data.episodes.forEach(ep => {
-                // ซ่อนลิงก์เสียจากสคริปต์รายเรื่องด้วย เพื่อให้ตรงกับการ Export 
                 if (!ep.isDead) {
-                    const safeEpTitle = ep.title.replace(/[\r\n]+/g, ' ').replace(/"/g, "'");
+                    const safeEpTitle = ep.title.replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
                     m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
                     activeEpsCount++;
                 }
             });
-            // แจ้งเตือนใน M3U หากเรื่องนั้นลิงก์เสีย 100%
             if (activeEpsCount === 0 && data.episodes.length > 0) {
                 m3u += `# ไม่มีลิงก์ที่สามารถใช้งานได้ (ลิงก์เสียทั้งหมด)\n`;
             }
@@ -1118,23 +1185,12 @@
         function filterResults() {
             const term = document.getElementById('searchInput').value.toLowerCase();
             const cards = document.querySelectorAll('#output > .card');
-            let visibleCount = 0;
             cards.forEach(card => {
                 const searchStr = card.getAttribute('data-search') || card.getAttribute('data-title');
-                if (searchStr.includes(term)) { card.classList.remove('hidden'); visibleCount++; } 
+                if (searchStr.includes(term)) { card.classList.remove('hidden'); } 
                 else { card.classList.add('hidden'); }
             });
-            const emptyState = document.getElementById('emptyState');
-            
-            if (cards.length === 0) {
-                emptyState.classList.remove('hidden');
-                emptyState.innerHTML = `<i class="fa-solid fa-layer-group text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลที่จะแสดงผล</h3><p class="text-sm text-slate-600 max-w-sm mx-auto mt-1">ตั้งค่าช่วงหน้าเว็บและคลิกปุ่มสแกนข้อมูลด้านบนเพื่อรับรายการคอนเทนต์</p>`;
-            } else if (visibleCount === 0) {
-                emptyState.classList.remove('hidden');
-                emptyState.innerHTML = `<i class="fa-solid fa-magnifying-glass text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ไม่พบซีรีส์ที่ค้นหา</h3><p class="text-sm text-slate-600 mt-1">ลองใช้คีย์เวิร์ดอื่น</p>`;
-            } else {
-                emptyState.classList.add('hidden');
-            }
+            updateGlobalActions(); // Update empty state
         }
 
         function toggleSingleM3U(btn) {
@@ -1155,13 +1211,11 @@
             let megaM3U = "\uFEFF#EXTM3U\n";
             gatheredSeries.forEach(series => {
                 const groupName = series.categoryText || "ซีรีส์ทั่วไป";
-                // ป้องกันปัญหา M3U Syntax พัง หากเจอกรณีชื่อซีรีส์แปลกๆ
-                const safeTitle = series.title.replace(/[\r\n]+/g, ' ').replace(/"/g, "'");
-                const safeGroupName = groupName.replace(/[\r\n]+/g, ' ').replace(/"/g, "'");
-                const safePoster = series.poster.replace(/[\r\n]+/g, '').replace(/"/g, "'");
+                const safeTitle = series.title.replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
+                const safeGroupName = groupName.replace(/"/g, "'");
+                const safePoster = series.poster.replace(/"/g, "'");
                 series.episodes.forEach(ep => {
-                    const safeEpTitle = ep.title.replace(/[\r\n]+/g, ' ').replace(/"/g, "'");
-                    // ข้ามการ export ลิงก์ที่เช็คแล้วว่าพัง
+                    const safeEpTitle = ep.title.replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
                     if (!ep.isDead) megaM3U += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
                 });
             });
@@ -1223,6 +1277,10 @@
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = url;
+                video.onerror = function() {
+                    video.classList.add('hidden'); placeholder.classList.remove('hidden');
+                    placeholder.innerHTML = `<i class="fa-solid fa-link-slash text-rose-500 text-5xl mb-3"></i><p class="text-slate-300 text-sm">การเชื่อมต่อสตรีมล้มเหลว (Native)</p>`;
+                };
                 video.onloadedmetadata = function() {
                     video.classList.remove('hidden'); placeholder.classList.add('hidden');
                     video.play().catch(e => console.warn("Native Play failed:", e));
