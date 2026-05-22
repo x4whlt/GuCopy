@@ -657,18 +657,32 @@
                 const proxyInput = document.getElementById('proxyInput').value.trim();
                 const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(url)) : url;
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4500); // 4.5s max to check
+                const timeoutId = setTimeout(() => controller.abort(), 6000); 
                 
+                // ใช้ Range Header เพื่อโหลดเนื้อหามาแค่ 1000 bytes แรก (ประหยัดแบนด์วิดท์ และเช็คไวขึ้น)
                 const res = await fetch(fetchUrl, {
                     method: 'GET',
+                    headers: { 'Range': 'bytes=0-1000' },
                     signal: controller.signal
                 });
                 
-                const isOk = res.ok || res.status === 206 || res.status === 200;
-                controller.abort(); // Cancel body download immediately to save bandwidth!
                 clearTimeout(timeoutId);
                 
-                return isOk;
+                if (!res.ok && res.status !== 206) {
+                    controller.abort();
+                    return false;
+                }
+                
+                // อ่านเนื้อหา เพื่อเช็คว่าเป็นไฟล์วิดีโอจริงๆ หรือเป็นหน้า Error 404 แบบ HTML
+                const text = await res.text();
+                controller.abort(); 
+                
+                if (url.includes('.m3u8') || url.includes('vdohls.com') || url.includes('javzero')) {
+                    // มาตรฐาน M3U8 ต้องมีแท็ก #EXTM3U ถ้าไม่มีแสดงว่าเป็นหน้าเว็บหลอก/ถูกลบ
+                    return text.includes('#EXTM3U');
+                }
+                
+                return true;
             } catch (e) {
                 return false; 
             }
