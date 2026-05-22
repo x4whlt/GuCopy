@@ -714,7 +714,7 @@
         }
 
         function backupDatabase() {
-            if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้สำรอง", "error"); return; }
+            if (gatheredSeries.length === 0) { showToast("NaN", "error"); return; }
             const backupData = gatheredSeries.map(series => ({ ...series, image: series.poster }));
             const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
