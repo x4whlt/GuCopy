@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AV Miso Harvester Pro | M3U Generator</title>
+    
+    <!-- Favicon Fix -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍑</text></svg>">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- HLS.js for video streaming preview -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- LocalForage for Infinite Storage -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'Sarabun', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            pink: '#F43F5E', darkBg: '#0F0B11', cardBg: '#1C1520',
+                            accent: '#E11D48', success: '#10B981', danger: '#EF4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #0F0B11;
+            background-image: radial-gradient(circle at top right, rgba(225, 29, 72, 0.15) 0%, transparent 60%);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0F0B11; }
+        ::-webkit-scrollbar-thumb { background: #E11D48; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #BE123C; }
+        
+        /* Glowing effects & Glassmorphism */
+        .glow-pink { box-shadow: 0 0 15px rgba(225, 29, 72, 0.35); }
+        .glassmorphism {
+            background: rgba(28, 21, 32, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        select:disabled, button:disabled, input:disabled {
+            cursor: not-allowed; opacity: 0.6;
+        }
+        
+        /* Progress Bar Animation */
+        #progressBar { transition: width 0.4s ease; }
+        @keyframes shimmer {
+            0% { transform: translateX(-150%) skewX(-20deg); }
+            100% { transform: translateX(150%) skewX(-20deg); }
+        }
+        
+        /* Custom Checkbox */
+        .cat-checkbox:checked + div {
+            background-color: rgba(225, 29, 72, 0.2);
+            border-color: #E11D48; color: #fff;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen pb-16 px-4 sm:px-6">
+
+    <div class="max-w-7xl mx-auto pt-8">
+        <!-- Header Section -->
+        <header class="text-center mb-8">
+            <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-rose-900/50 mb-4 shadow-lg">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.2.0 (DOM Parser)</span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-500 to-purple-600 mb-3">
+                AV MISO HARVESTER PRO
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto font-light leading-relaxed">
+                ระบบดึงข้อมูลวิดีโอ <span class="text-rose-400 font-medium">AVMISOHD</span> อัตโนมัติ พร้อมส่งออก M3U
+                <br class="hidden sm:block">รองรับ Proxy ทะลุบล็อคและระบบจัดการคลังเก็บข้อมูลส่วนตัว
+            </p>
+        </header>
+
+        <!-- Controls & Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Left Side Controls Panel -->
+            <div class="lg:col-span-2 glassmorphism rounded-2xl p-6 glow-pink relative overflow-hidden">
+                <div class="flex items-center gap-3 mb-5 border-b border-rose-900/50 pb-3">
+                    <i class="fa-solid fa-sliders text-rose-500 text-xl"></i>
+                    <h2 class="text-lg font-bold">แผงควบคุมการสแกนวิดีโอ</h2>
+                </div>
+
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">หมวดหมู่เป้าหมาย (เลือกเพื่อจัดคิว)</label>
+                    <div id="categoryCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="sexjapan" data-text="หนังโป๊ญี่ปุ่น" checked class="cat-checkbox sr-only">
+                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังโป๊ญี่ปุ่น <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-subthai" data-text="หนังavซับไทย" class="cat-checkbox sr-only">
+                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavซับไทย <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-china" data-text="หนังโป๊จีน" class="cat-checkbox sr-only">
+                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังโป๊จีน <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="xxxporn" data-text="หนังโป๊ฝรั่ง" class="cat-checkbox sr-only">
+                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังโป๊ฝรั่ง <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-student" data-text="หนังavนักเรียน" class="cat-checkbox sr-only">
+                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavนักเรียน <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer relative">
+                            <input type="checkbox" name="category" value="av-family" data-text="หนังavครอบครัว" class="cat-checkbox sr-only">
+                            <div class="px-3 py-2 text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded-lg hover:border-rose-400 transition-colors flex items-center justify-between">
+                                หนังavครอบครัว <i class="fa-solid fa-check text-rose-500 opacity-0 transition-opacity"></i>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                    <div>
+                        <label for="proxyInput" class="block text-xs font-semibold text-slate-400 uppercase mb-2">ทางผ่านพร็อกซี (API Proxy)</label>
+                        <input type="text" id="proxyInput" name="proxyInput" value="/api/proxy?url=" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500 transition-colors" placeholder="/api/proxy?url=">
+                    </div>
+
+                    <div>
+                        <label for="speedSelect" class="block text-xs font-semibold text-slate-400 uppercase mb-2">ความเร็วสแกนย่อย</label>
+                        <select id="speedSelect" name="speedSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500 transition-colors">
+                            <option value="2">ช้าและปลอดภัย (2 Threads)</option>
+                            <option value="5" selected>มาตรฐาน (5 Threads)</option>
+                            <option value="10">รวดเร็ว (10 Threads)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+                    <div class="md:col-span-3">
+                        <label for="startPage" class="block text-xs font-semibold text-slate-400 uppercase mb-2">เริ่มหน้า</label>
+                        <div class="flex items-center">
+                            <button type="button" aria-label="Decrease start page" onclick="adjustPage('startPage', -1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-l-lg border-y border-l border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-minus text-xs"></i></button>
+                            <input type="number" id="startPage" name="startPage" value="1" min="1" onchange="validatePages()" class="w-full bg-[#0B080D] border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
+                            <button type="button" aria-label="Increase start page" onclick="adjustPage('startPage', 1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-r-lg border-y border-r border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-plus text-xs"></i></button>
+                        </div>
+                    </div>
+                    <div class="md:col-span-3">
+                        <label for="endPage" class="block text-xs font-semibold text-slate-400 uppercase mb-2">ถึงหน้า</label>
+                        <div class="flex items-center">
+                            <button type="button" aria-label="Decrease end page" onclick="adjustPage('endPage', -1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-l-lg border-y border-l border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-minus text-xs"></i></button>
+                            <input type="number" id="endPage" name="endPage" value="1" min="1" onchange="validatePages()" class="w-full bg-[#0B080D] border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
+                            <button type="button" aria-label="Increase end page" onclick="adjustPage('endPage', 1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-r-lg border-y border-r border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-plus text-xs"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-6 flex flex-col justify-end">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btnStart" onclick="startHarvesting()" class="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold h-9 rounded-lg shadow-md flex items-center justify-center gap-1.5 transition-all">
+                                <i class="fa-solid fa-play text-xs"></i> เริ่มสแกน
+                            </button>
+                            <button id="btnStop" onclick="stopHarvesting()" disabled class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-not-allowed border border-slate-700">
+                                <i class="fa-solid fa-circle-stop text-xs"></i> หยุด
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#0B080D]/80 rounded-xl p-4 border border-rose-900/30">
+                    <div class="flex items-center gap-3 mb-1">
+                        <div class="w-2.5 h-2.5 rounded-full bg-slate-500" id="statusDot"></div>
+                        <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">สถานะการทำงาน:</span>
+                        <span id="loader" class="text-sm font-semibold text-slate-200">แสตนบาย</span>
+                    </div>
+                    <div id="stats" class="text-xs text-slate-500 font-medium mb-3">รอรับคำสั่งสแกน</div>
+                    
+                    <div class="relative w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                        <div id="progressBar" class="absolute top-0 left-0 h-full w-0 bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500 relative">
+                            <div class="absolute top-0 left-0 right-0 bottom-0 bg-white/20" style="animation: shimmer 2.5s infinite linear; transform: skewX(-20deg);"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-1">
+                        <span class="text-[9px] text-slate-500 font-mono" id="progressText">0.0%</span>
+                        <span class="text-[9px] text-slate-500 font-mono truncate max-w-[300px] text-right" id="progressDetail">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terminal Logger -->
+            <div class="glassmorphism rounded-2xl p-6 glow-pink flex flex-col h-full min-h-[300px]">
+                <div class="flex items-center justify-between mb-3 border-b border-rose-900/50 pb-3">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-terminal text-rose-500 text-xl"></i>
+                        <h2 class="text-lg font-bold">Log Terminal</h2>
+                    </div>
+                    <button onclick="clearConsole()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-400 px-2.5 py-1 rounded border border-slate-700 transition-colors">ล้าง</button>
+                </div>
+                <div id="terminal" class="w-full bg-[#0B080D] rounded-xl p-3 font-mono text-[11px] leading-relaxed overflow-y-auto h-[250px] lg:h-[400px] text-slate-300 border border-slate-800/50">
+                    <div class="text-rose-400">[SYSTEM]: พร้อมทำงานกับ avmisohd.to ...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Actions / Playlists Download Section -->
+        <div id="globalActions" class="hidden mb-6 bg-gradient-to-r from-rose-900/20 via-slate-900/40 to-[#0B080D] rounded-2xl p-6 border border-rose-500/20">
+            <div class="flex flex-col items-center justify-center gap-5">
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 border-b border-rose-900/30 pb-4 w-full text-center sm:text-left">
+                    <div class="p-3 bg-rose-500/10 rounded-xl border border-rose-500/30 shrink-0">
+                        <i class="fa-solid fa-film text-2xl text-rose-500"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">จัดการคลังวิดีโอ & ส่งออก M3U</h3>
+                        <p class="text-xs text-slate-400">บันทึก Playlist นำไปเปิดในแอพดูหนัง</p>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap justify-center items-center gap-3 w-full">
+                    <button onclick="downloadAllM3U()" class="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition-all">
+                        <i class="fa-solid fa-download text-lg"></i> โหลดไฟล์ M3U
+                    </button>
+                    <button onclick="copyAllM3UToClipboard()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all">
+                        <i class="fa-solid fa-copy"></i> คัดลอก M3U
+                    </button>
+                    
+                    <div class="w-px h-8 bg-slate-700/50 hidden sm:block mx-1"></div>
+                    
+                    <button onclick="backupDatabase()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="บันทึก Backup (JSON)">
+                        <i class="fa-solid fa-database"></i> Backup
+                    </button>
+                    <button id="btnClearCache" onclick="clearData()" class="bg-rose-900/30 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all">
+                        <i class="fa-solid fa-trash-can"></i> ล้างฐานข้อมูล
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter and Search -->
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-4 mb-6 bg-slate-800/30 p-4 rounded-2xl border border-slate-700/50">
+            <h2 class="text-2xl font-black text-slate-100 flex items-center gap-3 w-full lg:w-auto">
+                <i class="fa-solid fa-play-circle text-rose-500"></i> คลังวิดีโอ 
+                <span id="countBadge" class="text-xs font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2.5 py-1 rounded-full shadow-inner">0 เรื่อง</span>
+            </h2>
+            
+            <div class="w-full lg:w-auto">
+                <div class="relative w-full sm:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                    <input type="text" id="searchInput" name="searchInput" oninput="handleSearchDebounced()" placeholder="ค้นหาชื่อเรื่อง, รหัส..." class="w-full bg-[#0B080D] border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500 transition-colors shadow-inner">
+                </div>
+            </div>
+        </div>
+
+        <div id="output" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start"></div>
+        
+        <!-- Pagination -->
+        <div id="paginationContainer" class="hidden flex flex-col sm:flex-row items-center justify-between bg-[#0B080D]/60 p-4 rounded-xl border border-slate-700/60 mt-8">
+            <p class="text-sm text-slate-400 mb-4 sm:mb-0" id="pageInfoText">แสดงรายการ 1 - 24 จากทั้งหมด 0 รายการ</p>
+            <div class="flex items-center gap-2">
+                <button onclick="changePage(-1)" id="btnPrevPage" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-10 rounded-lg border border-slate-700 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div class="px-4 py-2 bg-[#0B080D] rounded-lg border border-slate-800 text-sm font-bold text-rose-500" id="currentPageDisplay">หน้า 1 / 1</div>
+                <button onclick="changePage(1)" id="btnNextPage" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-10 rounded-lg border border-slate-700 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="emptyState" class="text-center py-20 bg-[#0B080D]/50 rounded-3xl border-2 border-dashed border-rose-900/30">
+            <i class="fa-solid fa-film text-slate-700 text-6xl mb-4"></i>
+            <h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลวิดีโอ</h3>
+            <p class="text-sm text-slate-600 max-w-sm mx-auto mt-1">กดปุ่มเริ่มสแกนด้านบน เพื่อดึงข้อมูลจากเว็บไซต์</p>
+        </div>
+    </div>
+
+    <!-- Video Preview Stream Player Modal -->
+    <div id="playerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 hidden transition-opacity duration-300">
+        <div class="bg-[#0B080D] rounded-2xl border border-rose-900/50 max-w-5xl w-full overflow-hidden shadow-2xl relative">
+            <div class="flex justify-between items-center p-4 border-b border-slate-800">
+                <div class="pr-4">
+                    <h3 id="modalTitle" class="font-bold text-white text-base md:text-lg line-clamp-1">ทดสอบเล่นวิดีโอ</h3>
+                    <p id="modalSubtitle" class="text-xs text-rose-400 line-clamp-1">Stream URL</p>
+                </div>
+                <button onclick="closePlayer()" class="text-slate-400 hover:text-white bg-slate-800 hover:bg-rose-600 w-8 h-8 rounded-full flex items-center justify-center transition-colors shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="aspect-video bg-black relative flex items-center justify-center">
+                <video id="hlsPlayer" controls class="w-full h-full object-contain hidden"></video>
+                <div id="videoPlaceholder" class="text-center p-6">
+                    <i class="fa-solid fa-compact-disc text-rose-500 text-5xl animate-spin mb-3"></i>
+                    <p class="text-slate-400 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีม...</p>
+                </div>
+            </div>
+            <div class="p-4 bg-[#0B080D] border-t border-slate-800 flex justify-between items-center gap-3">
+                <div class="w-full overflow-hidden">
+                    <p id="modalStreamUrl" class="text-xs font-mono text-slate-400 truncate"></p>
+                </div>
+                <button onclick="copyStreamUrl()" class="shrink-0 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-copy"></i> คัดลอก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        localforage.config({ name: 'AVMisoHarvester', storeName: 'av_data' });
+
+        // **ตั้งค่า Base URL ของเว็บเป้าหมายที่นี่**
+        let BASE_TARGET = 'https://avmisohd.to/'; 
+        let BASE_CAT = `${BASE_TARGET}category/`; 
+        
+        let activeHarvest = false;
+        let isStopped = false;
+        let gatheredSeries = []; 
+        let activeControllers = new Set();
+        
+        let currentDisplayList = [];
+        let currentPage = 1;
+        const ITEMS_PER_PAGE = 24;
+        let searchTimeout = null; 
+
+        // Utilities
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.toString().replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm transition-all duration-300 transform translate-y-2 opacity-0 glassmorphism z-[70]`;
+            let icon = '<i class="fa-solid fa-circle-info text-rose-400"></i>';
+            if (type === 'success') { icon = '<i class="fa-solid fa-circle-check text-emerald-400"></i>'; toast.style.borderColor = 'rgba(16, 185, 129, 0.3)'; } 
+            else if (type === 'error') { icon = '<i class="fa-solid fa-circle-exclamation text-rose-500"></i>'; toast.style.borderColor = 'rgba(239, 68, 68, 0.3)'; } 
+            
+            toast.innerHTML = `${icon} <span class="text-slate-200">${escapeHTML(message)}</span>`;
+            document.getElementById('toastContainer').appendChild(toast);
+            setTimeout(() => toast.classList.remove('opacity-0', 'translate-y-2'), 10);
+            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function appendLog(text, colorClass = 'text-slate-300') {
+            const terminal = document.getElementById('terminal');
+            const time = new Date().toLocaleTimeString();
+            const logItem = document.createElement('div');
+            logItem.className = colorClass;
+            logItem.innerHTML = `<span class="text-slate-600">[${time}]</span> <span class="log-text"></span>`;
+            logItem.querySelector('.log-text').innerText = text;
+            terminal.appendChild(logItem);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('terminal').innerHTML = `<div class="text-slate-500">[SYSTEM] เคลียร์บันทึกเรียบร้อย</div>`;
+        }
+
+        function updateProgress(percent, detailText = '') {
+            const bar = document.getElementById('progressBar');
+            const text = document.getElementById('progressText');
+            const detail = document.getElementById('progressDetail');
+            
+            let p = Math.min(Math.max(percent || 0, 0), 100).toFixed(1);
+            bar.style.width = p + '%';
+            text.textContent = p + '%';
+            if(detailText) detail.textContent = detailText;
+        }
+
+        function validatePages() {
+            let startVal = parseInt(document.getElementById('startPage').value);
+            let endVal = parseInt(document.getElementById('endPage').value);
+            if (isNaN(startVal) || startVal < 1) document.getElementById('startPage').value = 1;
+            if (isNaN(endVal) || endVal < 1) document.getElementById('endPage').value = 1;
+        }
+
+        function adjustPage(inputId, delta) {
+            const input = document.getElementById(inputId);
+            let val = parseInt(input.value) || 1; 
+            val = Math.max(1, val + delta);
+            input.value = val; 
+            validatePages();
+        }
+
+        async function saveToStorage() {
+            try { await localforage.setItem('av_data', gatheredSeries); } 
+            catch (e) { showToast('บันทึกข้อมูลล้มเหลว', 'error'); }
+        }
+
+        async function clearData() {
+            if(activeHarvest) { showToast('ไม่สามารถล้างข้อมูลระหว่างสแกน!', 'error'); return; }
+            if(confirm('ล้างข้อมูลวิดีโอทั้งหมดใช่หรือไม่?')) {
+                await localforage.removeItem('av_data');
+                gatheredSeries = [];
+                filterAndRender();
+                showToast('ล้างฐานข้อมูลสำเร็จ!', 'success');
+            }
+        }
+
+        function handleSearchDebounced() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => filterAndRender(), 300);
+        }
+
+        function filterAndRender(resetPage = true) {
+            if(resetPage) currentPage = 1;
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            
+            currentDisplayList = gatheredSeries.filter(item => {
+                const searchKeywords = `${item.title || ''} ${item.tags ? item.tags.join(' ') : ''}`.toLowerCase();
+                return searchKeywords.includes(term);
+            });
+
+            currentDisplayList.reverse(); // ใหม่สุดขึ้นก่อน
+            renderCurrentPage();
+            updateGlobalActionsUI();
+        }
+
+        function renderCurrentPage() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+            
+            if(currentDisplayList.length === 0) return;
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            currentDisplayList.slice(startIndex, endIndex).forEach(data => renderCard(data));
+            updatePaginationUI();
+        }
+
+        function changePage(direction) {
+            const totalPages = Math.ceil(currentDisplayList.length / ITEMS_PER_PAGE);
+            currentPage = Math.max(1, Math.min(currentPage + direction, totalPages));
+            renderCurrentPage();
+            document.getElementById('countBadge').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function updatePaginationUI() {
+            const container = document.getElementById('paginationContainer');
+            const btnPrev = document.getElementById('btnPrevPage');
+            const btnNext = document.getElementById('btnNextPage');
+            const pageDisplay = document.getElementById('currentPageDisplay');
+            const infoText = document.getElementById('pageInfoText');
+
+            if (currentDisplayList.length === 0) { container.classList.add('hidden'); return; }
+            container.classList.remove('hidden');
+
+            const totalPages = Math.ceil(currentDisplayList.length / ITEMS_PER_PAGE);
+            btnPrev.disabled = (currentPage === 1);
+            btnNext.disabled = (currentPage === totalPages);
+            pageDisplay.textContent = `หน้า ${currentPage} / ${totalPages}`;
+            
+            const startItem = ((currentPage - 1) * ITEMS_PER_PAGE) + 1;
+            const endItem = Math.min(currentPage * ITEMS_PER_PAGE, currentDisplayList.length);
+            infoText.textContent = `แสดงรายการ ${startItem} - ${endItem} จาก ${currentDisplayList.length}`;
+        }
+
+        function updateGlobalActionsUI() {
+            const container = document.getElementById('globalActions');
+            const emptyState = document.getElementById('emptyState');
+            const countBadge = document.getElementById('countBadge');
+            const outputEl = document.getElementById('output');
+            
+            countBadge.textContent = `${gatheredSeries.length} เรื่อง`;
+            gatheredSeries.length > 0 ? container.classList.remove('hidden') : container.classList.add('hidden');
+            
+            if (currentDisplayList.length === 0) {
+                emptyState.classList.remove('hidden');
+                outputEl.classList.add('hidden');
+                document.getElementById('paginationContainer').classList.add('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                outputEl.classList.remove('hidden');
+            }
+        }
+
+        // --- Core Fetching Logic ---
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        
+        function getSafeUrl(url) { try { return encodeURI(decodeURI(url)); } catch(e) { return encodeURI(url); } }
+
+        async function requestWithRetry(url, retries = 3) {
+            const proxyInput = document.getElementById('proxyInput').value.trim();
+            const targetUrl = getSafeUrl(url);
+            const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(targetUrl)) : targetUrl;
+
+            for (let i = 0; i < retries; i++) {
+                if (isStopped) return null;
+                const controller = new AbortController();
+                activeControllers.add(controller);
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
+                
+                try {
+                    const res = await fetch(fetchUrl, { signal: controller.signal });
+                    if (res.status === 404) return "404";
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return await res.text();
+                } catch (e) {
+                    if (isStopped) return null;
+                    if (i === retries - 1) { appendLog(`❌ โหลดหน้าเว็บล้มเหลว: ${url}`, 'text-rose-500'); return null; }
+                    await sleep(1500);
+                } finally {
+                    clearTimeout(timeoutId); activeControllers.delete(controller);
+                }
+            }
+            return null;
+        }
+
+        // Parse individual Video Post using pre-fetched metadata from category page
+        async function parseVideoPage(item, categoryText) {
+            const html = await requestWithRetry(item.url);
+            if (!html || html === "404") return null;
+            
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            
+            // 1. หาลิงก์ Stream (พยายามหา iframe, video tag, หรือ m3u8)
+            let streamUrls = [];
+            
+            // ค้นหา iframe (มักจะเป็น Player) - อิงจากคลาส responsive-player
+            const iframes = doc.querySelectorAll(".responsive-player iframe, iframe");
+            iframes.forEach(ifr => {
+                let src = ifr.getAttribute("src") || ifr.getAttribute("data-src");
+                if (src && !src.includes('facebook.com') && !src.includes('twitter.com') && !src.includes('histats.com')) {
+                    streamUrls.push(src);
+                }
+            });
+
+            // ค้นหา source ใน video tag
+            const videos = doc.querySelectorAll("video source, video");
+            videos.forEach(v => {
+                let src = v.getAttribute("src");
+                if(src && (src.includes('.mp4') || src.includes('.m3u8'))) streamUrls.push(src);
+            });
+
+            // ถ้าหาไม่เจอจริงๆ ให้ Extract Regex หา .m3u8 ใน HTML
+            if(streamUrls.length === 0) {
+                const m3u8Match = html.match(/(https?:\/\/[^"']+\.m3u8[^"']*)/i);
+                if(m3u8Match) streamUrls.push(m3u8Match[1]);
+            }
+
+            // ลบลิงก์ที่ซ้ำกัน
+            streamUrls = [...new Set(streamUrls)];
+
+            // จัดฟอร์แมท Episodes (หรือตอนเดี่ยว)
+            let episodes = [];
+            if(streamUrls.length > 0) {
+                streamUrls.forEach((url, idx) => {
+                    episodes.push({
+                        title: streamUrls.length > 1 ? `Part ${idx+1}` : "Main Video",
+                        url: url,
+                        isDead: false
+                    });
+                });
+            } else {
+                episodes.push({ title: "Player Not Found (Requires Deep Scrape)", url: item.url, isDead: true });
+            }
+
+            // 2. สกัด Tags/Code เล็กๆ จากชื่อเรื่อง
+            let tags = [categoryText];
+            const codeMatch = item.title.match(/[a-zA-Z]{2,5}-\d{3,4}/i); // เช่น MIDV-123
+            if(codeMatch) tags.push(codeMatch[0].toUpperCase());
+
+            const id = item.postId || item.url.replace(BASE_TARGET, '').replace(/\//g, '-') || Date.now().toString();
+
+            return { id, title: item.title, tags, poster: item.poster, episodes, categoryText };
+        }
+
+        function setScanningState(isActive) {
+            document.getElementById('btnStart').disabled = isActive;
+            document.getElementById('btnStop').disabled = !isActive;
+            document.querySelectorAll('input, select, .cat-checkbox').forEach(el => el.disabled = isActive);
+            
+            const dot = document.getElementById('statusDot');
+            if(isActive) {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse";
+            } else {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-slate-500";
+                document.getElementById('btnStart').className = "bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold h-9 rounded-lg shadow-md flex items-center justify-center gap-1.5 transition-all";
+                document.getElementById('btnStop').className = "bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-not-allowed border border-slate-700";
+            }
+        }
+
+        async function startHarvesting() {
+            if (activeHarvest) return;
+            const startPage = parseInt(document.getElementById("startPage").value) || 1; 
+            const endPage = parseInt(document.getElementById("endPage").value) || 1;
+            
+            const checkboxes = document.querySelectorAll('#categoryCheckboxes input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) { showToast('เลือกอย่างน้อย 1 หมวดหมู่!', 'error'); return; }
+            const categories = Array.from(checkboxes).map(cb => ({ value: cb.value, text: cb.getAttribute('data-text') }));
+            
+            activeHarvest = true; isStopped = false; setScanningState(true);
+            const loader = document.getElementById("loader"); const stats = document.getElementById("stats");
+            
+            let totalFound = 0; let globalPageCounter = 0;
+            const totalPagesToScan = (endPage - startPage + 1) * categories.length;
+
+            try {
+                for (let c = 0; c < categories.length; c++) {
+                    if (isStopped) break;
+                    const cat = categories[c];
+                    appendLog(`[SYSTEM] เริ่มดึงหมวด: ${cat.text}...`, 'text-rose-400 font-bold');
+                    
+                    for (let p = startPage; p <= endPage; p++) {
+                        if (isStopped) break; globalPageCounter++;
+                        
+                        const pageUrl = p === 1 ? `${BASE_CAT}${cat.value}/` : `${BASE_CAT}${cat.value}/page/${p}/`;
+                        loader.textContent = `🔍 สแกนหน้า ${p} (${cat.text})`;
+                        
+                        const catHtml = await requestWithRetry(pageUrl);
+                        if (catHtml === "404") {
+                            appendLog(`⚠️ ไม่พบหน้าหมวดหมู่นี้ ข้ามไปคิวถัดไป`, 'text-amber-400');
+                            globalPageCounter += (endPage - p); break; 
+                        }
+                        if (!catHtml) continue;
+
+                        // ใช้ DOMParser เพื่อดึงข้อมูล Post จากหน้าหมวดหมู่โดยตรง
+                        const doc = new DOMParser().parseFromString(catHtml, "text/html");
+                        const videoBlocks = doc.querySelectorAll('.video-block');
+                        
+                        let items = [];
+                        videoBlocks.forEach(b => {
+                            const aInfo = b.querySelector('a.infos');
+                            const img = b.querySelector('img');
+                            if (aInfo && aInfo.href) {
+                                // รองรับการทำ Lazy Load (data-src) ของ WP Rocket
+                                let src = img ? (img.getAttribute('data-src') || img.src) : '';
+                                if(src.startsWith('//')) src = 'https:' + src;
+                                
+                                items.push({
+                                    url: aInfo.href,
+                                    title: aInfo.title || aInfo.textContent.trim() || "Unknown Title",
+                                    poster: src,
+                                    postId: b.getAttribute('data-post-id')
+                                });
+                            }
+                        });
+
+                        if(items.length === 0) {
+                            appendLog(`⚠️ ไม่พบโพสต์ในหน้า ${p}`, 'text-amber-500');
+                            continue;
+                        }
+
+                        totalFound += items.length;
+                        stats.textContent = `พบ ${totalFound} เรื่องในหมวด ${cat.text}`;
+
+                        // วนลูปเข้าไปดึงรายละเอียดของแต่ละเรื่อง (นำ URL ไปหาลิงก์สตรีมมิ่ง)
+                        for (let i = 0; i < items.length; i++) {
+                            if (isStopped) break;
+                            const item = items[i];
+                            
+                            loader.textContent = `⏳ หน้า ${p} | เรื่อง ${i+1}/${items.length}`;
+                            updateProgress((((globalPageCounter - 1) / totalPagesToScan) * 100) + (((i + 1) / items.length) * (100 / totalPagesToScan)), item.title);
+                            
+                            await sleep(Math.floor(Math.random() * 500) + 500); 
+                            const data = await parseVideoPage(item, cat.text);
+                            
+                            if (data) {
+                                const existIdx = gatheredSeries.findIndex(s => s.id === data.id);
+                                if (existIdx !== -1) {
+                                    gatheredSeries[existIdx] = data; // Update existing
+                                } else {
+                                    gatheredSeries.push(data);
+                                }
+                                appendLog(`✅ เก็บข้อมูล: ${data.title.substring(0, 30)}...`, 'text-pink-300');
+                            }
+                        }
+                        await saveToStorage();
+                        filterAndRender(false);
+                    }
+                }
+            } catch (err) {
+                appendLog(`❌ Error: ${err.message}`, 'text-rose-500');
+            } finally {
+                activeHarvest = false;
+                if (isStopped) {
+                    updateProgress(0, 'ยกเลิกคำสั่ง'); loader.textContent = `⏹ ยกเลิก`;
+                    appendLog(`⏹ ถูกยกเลิกโดยผู้ใช้`, 'text-rose-400');
+                } else {
+                    updateProgress(100, 'สำเร็จ'); loader.textContent = `✅ สำเร็จทั้งหมด`;
+                    appendLog(`✅ เสร็จสิ้น! พบ ${gatheredSeries.length} เรื่องในฐานข้อมูล`, 'text-emerald-400 font-bold');
+                }
+                filterAndRender(false);
+                setScanningState(false);
+            }
+        }
+
+        function stopHarvesting() {
+            if (!activeHarvest) return;
+            isStopped = true;
+            appendLog(`[SYSTEM] กำลังส่งสัญญาณยกเลิก...`, 'text-rose-500');
+            activeControllers.forEach(controller => controller.abort());
+            activeControllers.clear();
+        }
+
+        // --- UI Rendering ---
+        function renderCard(data, targetContainer = null) {
+            let m3u = "\uFEFF#EXTM3U\n";
+            const safeTitle = (data.title || 'AV Video').replace(/["',]/g, '').trim();
+            const safeGroup = (data.categoryText || 'AV').replace(/["']/g, '');
+            const safePoster = (data.poster || '').replace(/["']/g, '');
+
+            let validEps = 0;
+            let optionsHtml = '';
+            data.episodes.forEach(ep => {
+                if (!ep.isDead) {
+                    const safeEp = (ep.title || 'Main').replace(/["',]/g, '').trim();
+                    m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroup}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEp}\n${ep.url.trim()}\n`;
+                    optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(ep.title)}</option>`;
+                    validEps++;
+                }
+            });
+            if (validEps === 0) m3u += `# No active streams found\n`;
+
+            const card = document.createElement("div");
+            card.className = "bg-[#161219] rounded-2xl overflow-hidden border border-rose-900/30 shadow-xl transition-all hover:border-rose-500/50 flex flex-col relative";
+            
+            let tagsHtml = data.tags.map(t => `<span class="bg-rose-900/40 text-rose-300 border border-rose-800/50 text-[10px] font-bold px-2 py-0.5 rounded uppercase">${escapeHTML(t)}</span>`).join('');
+
+            card.innerHTML = `
+                <div class="relative overflow-hidden aspect-video bg-black group">
+                    <img src="${escapeHTML(data.poster)}" alt="Poster" onerror="this.src='https://placehold.co/600x400/1C1520/E11D48?text=NO+IMG'" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+                    ${validEps === 0 ? '<span class="absolute top-2 right-2 bg-rose-600 text-white text-[10px] px-2 py-1 rounded shadow"><i class="fa-solid fa-link-slash"></i> ไม่พบสตรีม</span>' : ''}
+                </div>
+                <div class="p-4 flex flex-col justify-between flex-grow">
+                    <div>
+                        <h4 class="font-bold text-slate-100 text-sm line-clamp-2 leading-tight mb-2 hover:text-rose-400" title="${escapeHTML(data.title)}">${escapeHTML(data.title)}</h4>
+                        <div class="flex flex-wrap gap-1.5 mb-3">${tagsHtml}</div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex gap-2">
+                            <select class="ep-selector flex-grow bg-[#0B080D] border border-slate-700 rounded-lg text-xs px-2 focus:outline-none focus:border-rose-500 text-slate-300">
+                                ${optionsHtml || '<option value="">ไม่มีลิงก์เล่น</option>'}
+                            </select>
+                            <button onclick="previewVideo(this)" ${validEps === 0 ? 'disabled' : ''} class="shrink-0 bg-rose-600 hover:bg-rose-500 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow">
+                                <i class="fa-solid fa-play text-xs"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Accordion M3U Button -->
+                        <button onclick="toggleSingleM3U(this)" class="mt-3 w-full text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg border border-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+                            <i class="fa-solid fa-code"></i> สคริปต์ M3U
+                        </button>
+                        <div class="m3u-wrapper hidden mt-2">
+                            <div class="flex justify-end mb-1">
+                                <button onclick="copySingleM3U(this)" class="text-[10px] bg-rose-900/50 hover:bg-rose-800 px-2 py-0.5 rounded text-rose-300 flex items-center gap-1"><i class="fa-solid fa-copy"></i> คัดลอก</button>
+                            </div>
+                            <textarea readonly class="w-full h-20 bg-black text-rose-400 p-2 rounded text-[10px] font-mono leading-relaxed border border-slate-800 focus:outline-none select-all">${escapeHTML(m3u)}</textarea>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if(targetContainer) targetContainer.appendChild(card);
+            else document.getElementById("output").appendChild(card);
+        }
+
+        // Accordion M3U Logic
+        function toggleSingleM3U(btn) {
+            const wrapper = btn.nextElementSibling;
+            const isHidden = wrapper.classList.contains('hidden');
+
+            document.querySelectorAll('.m3u-wrapper:not(.hidden)').forEach(openWrap => {
+                openWrap.classList.add('hidden');
+                const prevBtn = openWrap.previousElementSibling;
+                if(prevBtn) prevBtn.innerHTML = `<i class="fa-solid fa-code"></i> สคริปต์ M3U`;
+            });
+
+            if (isHidden) {
+                wrapper.classList.remove('hidden');
+                btn.innerHTML = `<i class="fa-solid fa-xmark"></i> ปิดสคริปต์`;
+            }
+        }
+
+        function copySingleM3U(btn) {
+            btn.parentElement.nextElementSibling.select(); 
+            document.execCommand('copy'); 
+            showToast("คัดลอกสำเร็จ", "success");
+        }
+
+        function compileMegaM3U() {
+            let mega = "\uFEFF#EXTM3U\n";
+            gatheredSeries.forEach(s => {
+                const group = (s.categoryText || "AV").replace(/["']/g, '');
+                const title = (s.title || 'Video').replace(/["',]/g, '').trim();
+                const poster = (s.poster || '').replace(/["']/g, '');
+                s.episodes.forEach(ep => {
+                    if(!ep.isDead) mega += `#EXTINF:-1 tvg-logo="${poster}" group-title="${group}" tvg-name="${title}", ${title}\n${ep.url.trim()}\n`;
+                });
+            });
+            return mega;
+        }
+
+        function downloadAllM3U() {
+            if(gatheredSeries.length === 0) return;
+            const blob = new Blob([compileMegaM3U()], { type: 'audio/x-mpegurl;charset=utf-8' });
+            const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
+            a.download = `AV-Miso-Playlist-${new Date().toISOString().slice(0,10)}.m3u`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            showToast("ดาวน์โหลด M3U สำเร็จ!", "success");
+        }
+
+        function copyAllM3UToClipboard() {
+            if(gatheredSeries.length === 0) return;
+            const ta = document.createElement("textarea"); document.body.appendChild(ta);
+            ta.value = compileMegaM3U(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            showToast("คัดลอก M3U ทั้งหมดสำเร็จ", "success");
+        }
+
+        function backupDatabase() {
+            if (gatheredSeries.length === 0) return;
+            const blob = new Blob([JSON.stringify(gatheredSeries, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
+            a.download = `av-backup-${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            showToast("บันทึก Backup สำเร็จ!", "success");
+        }
+
+        // --- Player ---
+        let activeHls = null;
+        function previewVideo(btn) {
+            const select = btn.previousElementSibling;
+            const url = select.value; 
+            if(!url) return;
+            
+            // หา Card title เพื่อแสดง
+            const card = btn.closest('.bg-\\[\\#161219\\]');
+            const title = card.querySelector('h4').innerText;
+
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalStreamUrl').textContent = url;
+            document.getElementById('playerModal').classList.remove('hidden'); 
+            document.body.style.overflow = 'hidden';
+            
+            const video = document.getElementById('hlsPlayer'); 
+            const placeholder = document.getElementById('videoPlaceholder');
+            video.classList.add('hidden'); placeholder.classList.remove('hidden');
+
+            // เคลียร์อันเก่า
+            if(activeHls) { activeHls.destroy(); activeHls = null; }
+
+            // ถ้าเป็น iframe source ให้ยัดลง iframe (กรณีดึง .m3u8 ไม่ได้และได้หน้า iframe player มาแทน)
+            if(!url.includes('.m3u8') && !url.includes('.mp4')) {
+                placeholder.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-500 text-5xl mb-3"></i><p class="text-slate-300 text-sm mt-3">ระบบอาจไม่รองรับการเล่น Iframe โดยตรง<br>กรุณานำลิงก์ไปเปิดดูเอง</p>`;
+                return;
+            }
+
+            if (typeof Hls !== 'undefined' && Hls.isSupported() && url.includes('.m3u8')) {
+                const hls = new Hls(); activeHls = hls; 
+                hls.loadSource(url); hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.classList.remove('hidden'); placeholder.classList.add('hidden');
+                    video.play().catch(e => console.warn(e));
+                });
+                hls.on(Hls.Events.ERROR, function(e, data) {
+                    if (data.fatal) {
+                        video.classList.add('hidden'); placeholder.classList.remove('hidden');
+                        placeholder.innerHTML = `<i class="fa-solid fa-link-slash text-rose-500 text-5xl mb-3"></i><p class="text-slate-300">สตรีมล้มเหลว หรือถูกบล็อคโดยเว็บต้นทาง</p>`;
+                    }
+                });
+            } else {
+                video.src = url;
+                video.onerror = () => {
+                    video.classList.add('hidden'); placeholder.classList.remove('hidden');
+                    placeholder.innerHTML = `<i class="fa-solid fa-link-slash text-rose-500 text-5xl mb-3"></i><p class="text-slate-300">เบราว์เซอร์ไม่รองรับวิดีโอนี้</p>`;
+                };
+                video.onloadedmetadata = () => {
+                    video.classList.remove('hidden'); placeholder.classList.add('hidden');
+                    video.play().catch(e=>console.warn(e));
+                };
+            }
+        }
+
+        function closePlayer() {
+            document.getElementById('playerModal').classList.add('hidden'); document.body.style.overflow = '';
+            const video = document.getElementById('hlsPlayer');
+            video.pause(); video.removeAttribute('src'); video.load(); 
+            document.getElementById('videoPlaceholder').innerHTML = `<i class="fa-solid fa-compact-disc text-rose-500 text-5xl animate-spin mb-3"></i><p class="text-slate-400 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีม...</p>`;
+            if (activeHls) { activeHls.destroy(); activeHls = null; }
+        }
+
+        function copyStreamUrl() {
+            const urlText = document.getElementById('modalStreamUrl').textContent; if(!urlText) return;
+            const ta = document.createElement("textarea"); document.body.appendChild(ta);
+            ta.value = urlText; ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            showToast("คัดลอกลิงก์สำเร็จ", "success");
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const saved = await localforage.getItem('av_data');
+                if (saved && saved.length > 0) {
+                    gatheredSeries = saved;
+                    appendLog(`[SYSTEM] 💾 กู้คืนประวัติ ${gatheredSeries.length} วิดีโอ`, 'text-emerald-400');
+                    filterAndRender();
+                } else updateGlobalActionsUI();
+            } catch(e) {}
+        });
+    </script>
+</body>
+</html>
