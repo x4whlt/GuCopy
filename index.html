@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Series Extractor Pro & M3U Playlist Generator</title>
+    <title>Series Harvester Pro & M3U Playlist Generator</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,17 +21,11 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'Sarabun', 'sans-serif'],
-                    },
+                    fontFamily: { sans: ['Inter', 'Sarabun', 'sans-serif'] },
                     colors: {
                         brand: {
-                            gold: '#FBBF24',
-                            darkBg: '#0B0F19',
-                            cardBg: '#1E293B',
-                            accent: '#3B82F6',
-                            success: '#10B981',
-                            danger: '#EF4444'
+                            gold: '#FBBF24', darkBg: '#0B0F19', cardBg: '#1E293B',
+                            accent: '#3B82F6', success: '#10B981', danger: '#EF4444'
                         }
                     }
                 }
@@ -49,7 +43,7 @@
         ::-webkit-scrollbar-thumb { background: #3B82F6; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #60A5FA; }
         
-        /* Glowing effects */
+        /* Glowing effects & Glassmorphism */
         .glow-blue { box-shadow: 0 0 15px rgba(59, 130, 246, 0.35); }
         .glow-gold { box-shadow: 0 0 15px rgba(251, 191, 36, 0.35); }
         .glassmorphism {
@@ -60,8 +54,7 @@
         
         /* Disabled state transitions */
         select:disabled, button:disabled, input:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
+            cursor: not-allowed; opacity: 0.6;
         }
         
         /* Progress Bar Animation */
@@ -74,8 +67,7 @@
         /* Custom Checkbox */
         .cat-checkbox:checked + div {
             background-color: rgba(59, 130, 246, 0.2);
-            border-color: #3B82F6;
-            color: #fff;
+            border-color: #3B82F6; color: #fff;
         }
     </style>
 </head>
@@ -86,7 +78,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-slate-700/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 5.0 God Tier</span>
+                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 5.1 God Tier</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-yellow-300 to-blue-500 mb-3">
                 SERIES HARVESTER PRO
@@ -263,12 +255,20 @@
                     <button onclick="verifyLinks()" id="btnVerify" class="bg-indigo-600/50 hover:bg-indigo-500 border border-indigo-500/50 text-indigo-100 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="สแกนหาลิงก์เสียทั้งหมด">
                         <i class="fa-solid fa-heart-pulse"></i> เช็กลิงก์เสีย
                     </button>
-                    <button onclick="exportJSON()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="บันทึกข้อมูลเก็บไว้ในคอม">
-                        <i class="fa-solid fa-file-export"></i> ส่งออก JSON
+                    
+                    <!-- ปุ่มสำหรับส่งออกไปแอป (โครงสร้าง Hierarchical) -->
+                    <button onclick="exportIPTVJSON()" class="bg-fuchsia-900/50 hover:bg-fuchsia-800 border border-fuchsia-700 text-fuchsia-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="ส่งออก JSON สำหรับนำไปใช้ในแอปพลิเคชัน (แบบมีกลุ่ม)">
+                        <i class="fa-solid fa-tv"></i> ส่งออก IPTV
                     </button>
-                    <label class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer m-0" title="นำเข้าข้อมูลจากไฟล์ JSON">
+                    
+                    <!-- ปุ่มสำหรับสำรองฐานข้อมูล (โครงสร้างดิบสำหรับนำเข้า) -->
+                    <button onclick="backupDatabase()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all" title="บันทึกฐานข้อมูลดิบเก็บไว้ในคอมเพื่อนำเข้าใหม่">
+                        <i class="fa-solid fa-database"></i> สำรองข้อมูล
+                    </button>
+                    
+                    <label class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer m-0" title="นำเข้าข้อมูลจากไฟล์ Backup (ไม่รับไฟล์ IPTV)">
                         <input type="file" id="importJsonFile" accept=".json" class="hidden" onchange="importJSON(event)">
-                        <i class="fa-solid fa-file-import"></i> นำเข้า
+                        <i class="fa-solid fa-file-import"></i> กู้คืนข้อมูล
                     </label>
 
                     <div class="w-px h-8 bg-slate-700/50 hidden sm:block mx-1"></div> <!-- Divider -->
@@ -366,8 +366,7 @@
         let isStopped = false;
         let gatheredSeries = []; 
         let storageFullFlag = false; 
-        // แก้ไข 1: เปลี่ยนมาใช้ Set เพื่อรองรับ Concurrency แยกตาม Thread
-        let activeControllers = new Set();
+        let activeControllers = new Set(); // เปลี่ยนมาใช้ Set เพื่อรองรับ Concurrency แยกอิสระ
         
         // --- ระบบเสียงและ Toast ---
         let audioCtx = null;
@@ -404,7 +403,7 @@
 
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
-            toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm transition-all duration-300 transform translate-y-2 opacity-0 glassmorphism`;
+            toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm transition-all duration-300 transform translate-y-2 opacity-0 glassmorphism z-[70]`;
             let icon = '<i class="fa-solid fa-circle-info text-blue-400"></i>';
             if (type === 'success') { icon = '<i class="fa-solid fa-circle-check text-emerald-400"></i>'; toast.style.borderColor = 'rgba(16, 185, 129, 0.3)'; } 
             else if (type === 'error') { icon = '<i class="fa-solid fa-circle-exclamation text-rose-400"></i>'; toast.style.borderColor = 'rgba(239, 68, 68, 0.3)'; } 
@@ -530,18 +529,87 @@
             updateGlobalActions();
         }
 
-        function exportJSON() {
+        function exportIPTVJSON() {
             if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้ส่งออก", "error"); return; }
+            
+            const exportData = {
+                name: "kubhd24",
+                author: "Auto Update",
+                image: "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3Y3o5Nmszb29mYWxreTQ2cjFpeWZoaGJ6MWJicDBqbmJvdHJxamJ5byZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/OQci2SBvkH3Evhroy0/giphy.gif",
+                groups: []
+            };
+
+            const groupedByCategory = {};
+            gatheredSeries.forEach(series => {
+                const catName = "📂 " + (series.categoryText || "ซีรีส์ทั่วไป");
+                if (!groupedByCategory[catName]) {
+                    groupedByCategory[catName] = [];
+                }
+                groupedByCategory[catName].push(series);
+            });
+
+            for (const catName in groupedByCategory) {
+                const categoryGroup = {
+                    name: catName,
+                    image: "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3NTg0dzV4aW94YzlhZW5jcWJzajBuYWxlNGppYXE1aHJycm9tdWdlbiZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/nmNteFq0j85RAhfvgQ/giphy.gif",
+                    groups: []
+                };
+
+                groupedByCategory[catName].forEach(series => {
+                    const tagString = series.tags && series.tags.length > 0 
+                                      ? series.tags.map(t => t.text).join(' | ') 
+                                      : "";
+                    const infoText = tagString ? `${tagString} | EP 1 - ${series.episodes.length} จบ` : `EP 1 - ${series.episodes.length} จบ`;
+                    
+                    const seriesObj = {
+                        name: series.title,
+                        image: series.poster,
+                        info: "",
+                        stations: []
+                    };
+
+                    series.episodes.forEach((ep) => {
+                        if (!ep.isDead) {
+                            seriesObj.stations.push({
+                                name: ep.title,
+                                image: series.poster,
+                                url: ep.url,
+                                info: infoText,
+                                playInNatPlayer: "true",
+                                userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+                            });
+                        }
+                    });
+
+                    if (seriesObj.stations.length > 0) {
+                        categoryGroup.groups.push(seriesObj);
+                    }
+                });
+                exportData.groups.push(categoryGroup);
+            }
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url;
+            a.download = `kubhd24-iptv-${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("ส่งออก IPTV JSON แล้ว!", "success");
+            appendLog(`[SYSTEM] 📤 ส่งออกข้อมูล IPTV JSON สำเร็จ`, 'text-emerald-400');
+        }
+
+        function backupDatabase() {
+            if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้สำรอง", "error"); return; }
             const dataStr = JSON.stringify(gatheredSeries, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
+            const a = document.createElement('a'); a.href = url;
             a.download = `harvester-backup-${new Date().toISOString().slice(0,10)}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast("ส่งออกข้อมูล JSON แล้ว!", "success");
-            appendLog(`[SYSTEM] 📤 ส่งออกฐานข้อมูล JSON สำเร็จ`, 'text-emerald-400');
+            showToast("สำรองฐานข้อมูลดิบสำเร็จ!", "success");
+            appendLog(`[SYSTEM] 💾 สำรองฐานข้อมูล (Backup) เก็บไว้ในเครื่องสำเร็จ`, 'text-blue-400');
         }
 
         function importJSON(event) {
@@ -552,10 +620,10 @@
             reader.onload = async function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
+                    // ตรวจสอบว่าเป็นไฟล์ Backup ดิบ ไม่ใช่ไฟล์ IPTV
                     if (Array.isArray(data)) {
                         let newAdded = 0, updated = 0;
                         data.forEach(importedItem => {
-                            // ดักเช็คโครงสร้าง Object ป้องกันนำเข้าไฟล์มั่วจนเว็บพัง
                             if (!importedItem || !importedItem.id || !Array.isArray(importedItem.episodes)) return;
                             
                             const existingIdx = gatheredSeries.findIndex(s => s.id === importedItem.id);
@@ -567,10 +635,10 @@
                         });
                         await saveToStorage();
                         refreshOutput();
-                        showToast(`นำเข้าสำเร็จ! เพิ่ม ${newAdded} และ อัปเดต ${updated} เรื่อง`, "success");
-                        appendLog(`📥 นำเข้า JSON: เพิ่มใหม่ ${newAdded} เรื่อง, อัปเดต ${updated} เรื่อง`, "text-emerald-400");
+                        showToast(`กู้คืนข้อมูลสำเร็จ! เพิ่ม ${newAdded} และ อัปเดต ${updated} เรื่อง`, "success");
+                        appendLog(`📥 กู้คืน JSON: เพิ่มใหม่ ${newAdded} เรื่อง, อัปเดต ${updated} เรื่อง`, "text-emerald-400");
                     } else {
-                        showToast("ไฟล์ JSON ไม่ถูกต้อง หรือพัง!", "error");
+                        showToast("กรุณาใช้ไฟล์ Backup (ไม่ใช่ไฟล์ IPTV)", "error");
                     }
                 } catch (err) { showToast("ไฟล์ JSON ไม่ถูกต้อง หรือพัง!", "error"); }
                 event.target.value = ''; 
@@ -685,7 +753,6 @@
             for (let i = 0; i < retries; i++) {
                 if (isStopped) return null;
                 
-                // สร้าง Controller แยกเฉพาะของแต่ละ Request
                 const controller = new AbortController();
                 activeControllers.add(controller);
                 
@@ -695,12 +762,10 @@
                 
                 try {
                     const res = await fetch(fetchUrl, { signal: controller.signal });
-                    clearTimeout(timeoutId);
-                    if (res.status === 404) return "404_NOT_FOUND"; // Custom response to bypass loop
+                    if (res.status === 404) return "404_NOT_FOUND";
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
                     return isJson ? await res.json() : await res.text();
                 } catch (e) {
-                    clearTimeout(timeoutId);
                     if (isStopped) return null;
                     const isTimeout = e.name === 'AbortError';
                     const errMsg = isTimeout ? 'Server Timeout' : e.message;
@@ -711,6 +776,7 @@
                     appendLog(`⚠️ ขัดข้อง (${errMsg}) ลองใหม่รอบ ${i+2}/${retries}...`, 'text-amber-500');
                     await sleep(2000);
                 } finally {
+                    clearTimeout(timeoutId); // ป้องกันบั๊ก Timeout ค้างหรืออ่าน Body ช้าเกิน
                     activeControllers.delete(controller);
                 }
             }
@@ -936,7 +1002,7 @@
         // --- ระบบ Check Dead Links ---
         async function verifyLinks() {
             if (gatheredSeries.length === 0) return;
-            getAudioContext(); // แก้ไข 3: ปลุกระบบเสียงทันทีที่ผู้ใช้คลิก เพื่อไม่ให้เบราว์เซอร์บล็อกเมื่อทำงานเสร็จ
+            getAudioContext(); 
             
             let allEps = [];
             gatheredSeries.forEach(series => {
@@ -977,7 +1043,7 @@
                     const controller = new AbortController();
                     activeControllers.add(controller);
                     let timeoutId;
-
+                    
                     try {
                         const proxyInput = document.getElementById('proxyInput').value.trim();
                         const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(getSafeUrl(item.ep.url))) : getSafeUrl(item.ep.url);
@@ -987,17 +1053,14 @@
                         }, 8000); 
                         
                         const checkRes = await fetch(fetchUrl, { method: 'GET', signal: controller.signal });
-                        clearTimeout(timeoutId);
-                        
                         if (!checkRes.ok && checkRes.status !== 405) { item.ep.isDead = true; deadCount++; } 
                         else { item.ep.isDead = false; }
                     } catch (e) {
-                        clearTimeout(timeoutId); // ตอนนี้จะไม่เกิด ReferenceError แล้ว
-                        // ไม่นับว่าเป็นลิงก์เสียถ้าถูกสั่งหยุดการทำงาน
                         if (e.name !== 'AbortError' || !isStopped) {
                             item.ep.isDead = true; deadCount++;
                         }
                     } finally {
+                        clearTimeout(timeoutId); // เคลียร์เมมโมรี่ Timer ทุกกรณี
                         activeControllers.delete(controller);
                     }
                     checked++;
@@ -1023,7 +1086,7 @@
             if (!activeHarvest) return;
             isStopped = true;
             appendLog(`[SYSTEM] กำลังส่งคำสั่งหยุดการทำงานและตัดการเชื่อมต่อ...`, 'text-rose-500');
-            // ยกเลิกทุก Request ที่ค้างอยู่ในระบบทั้งหมดทันที
+            
             activeControllers.forEach(controller => controller.abort());
             activeControllers.clear();
             
@@ -1081,15 +1144,15 @@
         function renderCard(data, pageNum, targetContainer = null) {
             let m3u = "\uFEFF#EXTM3U\n";
             const groupName = data.categoryText || "ซีรีส์ทั่วไป";
-            // แก้ไข 4: ป้องกัน M3U พังจากการเว้นบรรทัด และลบเครื่องหมายลูกน้ำ (,) เพื่อไม่ให้ตัวแบ่ง Metadata ในไฟล์เสีย
-            const safeTitle = data.title.replace(/["',]/g, ' ').replace(/[\r\n]+/g, ' ').trim();
-            const safeGroupName = groupName.replace(/["',]/g, ' ').trim();
-            const safePoster = data.poster.replace(/"/g, "'");
+            // ป้องกัน M3U เสียหายจากการเว้นบรรทัดและเครื่องหมายที่ผิด
+            const safeTitle = data.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
+            const safeGroupName = groupName.replace(/["']/g, '');
+            const safePoster = data.poster.replace(/["']/g, '');
 
             let activeEpsCount = 0;
             data.episodes.forEach(ep => {
                 if (!ep.isDead) {
-                    const safeEpTitle = ep.title.replace(/["',]/g, ' ').replace(/[\r\n]+/g, ' ').trim();
+                    const safeEpTitle = ep.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
                     m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
                     activeEpsCount++;
                 }
@@ -1231,12 +1294,12 @@
             let megaM3U = "\uFEFF#EXTM3U\n";
             gatheredSeries.forEach(series => {
                 const groupName = series.categoryText || "ซีรีส์ทั่วไป";
-                // ใช้ตรรกะ Regex เดียวกันกับด้านบนเพื่อป้องกันบั๊ก
-                const safeTitle = series.title.replace(/["',]/g, ' ').replace(/[\r\n]+/g, ' ').trim();
-                const safeGroupName = groupName.replace(/["',]/g, ' ').trim();
-                const safePoster = series.poster.replace(/"/g, "'");
+                // ใช้ Regular Expression ลบเครื่องหมาย " ' และ , ป้องกันไฟล์พัง
+                const safeTitle = series.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
+                const safeGroupName = groupName.replace(/["']/g, '');
+                const safePoster = series.poster.replace(/["']/g, '');
                 series.episodes.forEach(ep => {
-                    const safeEpTitle = ep.title.replace(/["',]/g, ' ').replace(/[\r\n]+/g, ' ').trim();
+                    const safeEpTitle = ep.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
                     if (!ep.isDead) megaM3U += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
                 });
             });
