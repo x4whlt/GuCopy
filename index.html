@@ -595,8 +595,16 @@
                             seriesObj.groups = [];
                             seasonKeys.forEach(sName => {
                                 const seasonEps = seasons[sName];
+                                
+                                // กรองเอา Tag season แบบรวม (เช่น Season 1-2) ออกไป และใส่ชื่อ Season เฉพาะเจาะจงแทน
+                                let currentSeasonTags = series.tags ? series.tags.filter(t => t.type !== 'season').map(t => t.text) : [];
+                                if (sName !== defaultSeasonName) {
+                                    currentSeasonTags.unshift(sName);
+                                }
+                                const specificTagString = currentSeasonTags.join(' | ');
+
                                 // สร้าง infoText เฉพาะของซีซันนั้นๆ (นับแค่ตอนในซีซัน)
-                                const seasonInfoText = tagString ? `${tagString} | EP 1 - ${seasonEps.length} จบ` : `EP 1 - ${seasonEps.length} จบ`;
+                                const seasonInfoText = specificTagString ? `${specificTagString} | EP 1 - ${seasonEps.length} จบ` : `EP 1 - ${seasonEps.length} จบ`;
                                 
                                 const stations = seasonEps.map(ep => {
                                     let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
