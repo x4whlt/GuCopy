@@ -80,7 +80,7 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-rose-900/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.3.1 (Bug Fixed)</span>
+                <span class="text-xs font-semibold text-rose-300 uppercase tracking-widest">AV MISO ENGINE v1.3.2 (Iframe Player Supported)</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-rose-500 to-purple-600 mb-3">
                 AV MISO HARVESTER PRO
@@ -208,7 +208,6 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 shrink-0">
                     <div>
                         <label for="proxyInput" class="block text-xs font-semibold text-slate-400 uppercase mb-2">ทางผ่านพร็อกซี (API Proxy)</label>
-                        <!-- CHANGED: Reverted to use custom backend proxy -->
                         <input type="text" id="proxyInput" name="proxyInput" value="/api/proxy?url=" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-rose-500 transition-colors" placeholder="/api/proxy?url=">
                         <p class="text-[9px] text-emerald-400 mt-1">* เชื่อมต่อกับไฟล์ api/proxy.js ของคุณแล้ว</p>
                     </div>
@@ -371,8 +370,13 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div class="aspect-video bg-black relative flex items-center justify-center">
+            <div class="aspect-video bg-black relative flex items-center justify-center w-full h-full">
+                <!-- Video Player for .m3u8 / .mp4 -->
                 <video id="hlsPlayer" controls playsinline class="w-full h-full object-contain hidden"></video>
+                
+                <!-- NEW: Iframe Player for embed URLs -->
+                <iframe id="iframePlayer" class="w-full h-full border-0 hidden" allowfullscreen allow="autoplay; fullscreen"></iframe>
+                
                 <div id="videoPlaceholder" class="text-center p-6">
                     <i class="fa-solid fa-compact-disc text-rose-500 text-5xl animate-spin mb-3"></i>
                     <p class="text-slate-400 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีม...</p>
@@ -462,7 +466,6 @@
             if(detailText) detail.textContent = detailText;
         }
 
-        // CHANGED: Fixed Page Validation logic
         function validatePages() {
             let startInput = document.getElementById('startPage');
             let endInput = document.getElementById('endPage');
@@ -604,6 +607,7 @@
             iframes.forEach(ifr => {
                 let src = ifr.getAttribute("src") || ifr.getAttribute("data-src");
                 if (src && !src.includes('facebook.com') && !src.includes('twitter.com') && !src.includes('histats.com')) {
+                    if (src.startsWith('//')) src = 'https:' + src; // NEW: Fix protocol relative URLs
                     streamUrls.push(src);
                 }
             });
@@ -611,12 +615,21 @@
             const videos = doc.querySelectorAll("video source, video");
             videos.forEach(v => {
                 let src = v.getAttribute("src");
-                if(src && (src.includes('.mp4') || src.includes('.m3u8'))) streamUrls.push(src);
+                if(src && (src.includes('.mp4') || src.includes('.m3u8'))) {
+                    if (src.startsWith('//')) src = 'https:' + src;
+                    streamUrls.push(src);
+                }
             });
 
             if(streamUrls.length === 0) {
                 const m3u8Match = html.match(/(https?:\/\/[^"']+\.m3u8[^"']*)/i);
-                if(m3u8Match) streamUrls.push(m3u8Match[1]);
+                if(m3u8Match) {
+                    streamUrls.push(m3u8Match[1]);
+                } else {
+                     // Check for protocol relative m3u8 just in case
+                     const m3u8MatchRel = html.match(/(\/\/[^"']+\.m3u8[^"']*)/i);
+                     if (m3u8MatchRel) streamUrls.push('https:' + m3u8MatchRel[1]);
+                }
             }
 
             streamUrls = [...new Set(streamUrls)];
@@ -662,7 +675,7 @@
             if (activeHarvest) return;
             const startPage = parseInt(document.getElementById("startPage").value) || 1; 
             const endPage = parseInt(document.getElementById("endPage").value) || 1;
-            const concurrencyLimit = parseInt(document.getElementById("speedSelect").value) || 5; // CHANGED: Get speed
+            const concurrencyLimit = parseInt(document.getElementById("speedSelect").value) || 5; 
             
             const checkboxes = document.querySelectorAll('#categoryCheckboxes input[type="checkbox"]:checked');
             if (checkboxes.length === 0) { showToast('เลือกอย่างน้อย 1 หมวดหมู่!', 'error'); return; }
@@ -701,7 +714,6 @@
                             const aInfo = b.querySelector('a.infos');
                             const img = b.querySelector('img');
                             if (aInfo && aInfo.href) {
-                                // CHANGED: Fixed Image Source parsing
                                 let src = img ? (img.getAttribute('data-src') || img.getAttribute('src')) : '';
                                 if(src.startsWith('//')) src = 'https:' + src;
                                 else if(src.startsWith('/')) src = BASE_TARGET.replace(/\/$/, '') + src;
@@ -723,7 +735,6 @@
                         totalFound += items.length;
                         stats.textContent = `พบ ${totalFound} เรื่องในหมวด ${cat.text}`;
 
-                        // CHANGED: Implemented Concurrency (Threads) logic
                         for (let i = 0; i < items.length; i += concurrencyLimit) {
                             if (isStopped) break;
                             const chunk = items.slice(i, i + concurrencyLimit);
@@ -904,8 +915,11 @@
         let activeHls = null;
         function previewVideo(btn) {
             const select = btn.previousElementSibling;
-            const url = select.value; 
+            let url = select.value; 
             if(!url) return;
+
+            // NEW: Automatically fix protocol-relative URLs if any slipped through
+            if (url.startsWith('//')) url = 'https:' + url;
             
             // หา Card title เพื่อแสดง
             const card = btn.closest('.bg-\\[\\#161219\\]');
@@ -917,15 +931,22 @@
             document.body.style.overflow = 'hidden';
             
             const video = document.getElementById('hlsPlayer'); 
+            const iframe = document.getElementById('iframePlayer');
             const placeholder = document.getElementById('videoPlaceholder');
-            video.classList.add('hidden'); placeholder.classList.remove('hidden');
+            
+            video.classList.add('hidden'); 
+            iframe.classList.add('hidden');
+            placeholder.classList.remove('hidden');
 
             // เคลียร์อันเก่า
             if(activeHls) { activeHls.destroy(); activeHls = null; }
+            iframe.src = '';
 
-            // ถ้าเป็น iframe source ให้ยัดลง iframe (กรณีดึง .m3u8 ไม่ได้และได้หน้า iframe player มาแทน)
+            // NEW: ถ้าเป็นลิงก์ embed (ไม่ใช่ .m3u8 หรือ .mp4) ให้ฝัง Iframe ทันทีแทนที่จะแจ้ง Error
             if(!url.includes('.m3u8') && !url.includes('.mp4')) {
-                placeholder.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-500 text-5xl mb-3"></i><p class="text-slate-300 text-sm mt-3">ระบบอาจไม่รองรับการเล่น Iframe โดยตรง<br>กรุณานำลิงก์ไปเปิดดูเอง</p>`;
+                placeholder.classList.add('hidden');
+                iframe.src = url;
+                iframe.classList.remove('hidden');
                 return;
             }
 
@@ -957,9 +978,20 @@
 
         function closePlayer() {
             document.getElementById('playerModal').classList.add('hidden'); document.body.style.overflow = '';
+            
             const video = document.getElementById('hlsPlayer');
+            const iframe = document.getElementById('iframePlayer');
+            
             video.pause(); video.removeAttribute('src'); video.load(); 
+            video.classList.add('hidden');
+            
+            // NEW: Stop and hide iframe
+            iframe.src = ''; 
+            iframe.classList.add('hidden');
+            
             document.getElementById('videoPlaceholder').innerHTML = `<i class="fa-solid fa-compact-disc text-rose-500 text-5xl animate-spin mb-3"></i><p class="text-slate-400 text-sm mt-3">กำลังเชื่อมต่อสัญญาณสตรีม...</p>`;
+            document.getElementById('videoPlaceholder').classList.remove('hidden');
+            
             if (activeHls) { activeHls.destroy(); activeHls = null; }
         }
 
