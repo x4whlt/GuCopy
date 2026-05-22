@@ -79,13 +79,13 @@
         <header class="text-center mb-8">
             <div class="inline-flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-full border border-slate-700/50 mb-4 shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 6.0 Performance Build</span>
+                <span class="text-xs font-semibold text-slate-300 uppercase tracking-widest">Version 6.2 Stable Build</span>
             </div>
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-yellow-300 to-blue-500 mb-3">
                 SERIES HARVESTER PRO
             </h1>
             <p class="text-slate-400 text-sm md:text-base max-w-2xl mx-auto font-light leading-relaxed">
-                สุดยอดเครื่องมือดึงข้อมูลซีรีส์ <span class="text-amber-400 font-medium">Infinite Storage</span> พร้อมระบบ Smart Sync 
+                สุดยอดเครื่องมือดึงข้อมูลซีรีส์ <span class="text-amber-400 font-medium">Infinite Storage</span> พร้อมระบบ Smart Sync 
                 <br class="hidden sm:block">และ Virtual DOM Pagination รองรับข้อมูลหลักหมื่นเรื่องโดยไม่กระตุก
             </p>
         </header>
@@ -142,13 +142,11 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                    <!-- Custom Proxy input -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">ทางผ่านพร็อกซี (Proxy Endpoint)</label>
                         <input type="text" id="proxyInput" value="/api/proxy?url=" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 transition-colors" placeholder="/api/proxy?url=">
                     </div>
 
-                    <!-- Speed Control -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">ความเร็ว (Concurrency)</label>
                         <select id="speedSelect" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition-colors">
@@ -160,7 +158,6 @@
                     </div>
                 </div>
 
-                <!-- Page Inputs & Buttons -->
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
                     <div class="md:col-span-3">
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">เริ่มจากหน้า</label>
@@ -195,7 +192,6 @@
                     </div>
                 </div>
 
-                <!-- Live Status & Info Bar -->
                 <div class="bg-slate-900/60 rounded-xl p-4 border border-slate-700/60">
                     <div class="flex items-center gap-3 mb-1">
                         <div class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" id="statusDot"></div>
@@ -204,7 +200,6 @@
                     </div>
                     <div id="stats" class="text-xs text-slate-500 font-medium mb-3">ไม่มีกระบวนการทำงานในขณะนี้</div>
                     
-                    <!-- Progress Bar -->
                     <div class="relative w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
                         <div id="progressBar" class="absolute top-0 left-0 h-full w-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 relative">
                             <div class="absolute top-0 left-0 right-0 bottom-0 bg-white/20" style="animation: shimmer 2.5s infinite linear; transform: skewX(-20deg);"></div>
@@ -217,7 +212,6 @@
                 </div>
             </div>
 
-            <!-- Right Side Live Logs Terminal -->
             <div class="glassmorphism rounded-2xl p-6 glow-gold flex flex-col h-full min-h-[300px]">
                 <div class="flex items-center justify-between mb-3 border-b border-slate-700/50 pb-3">
                     <div class="flex items-center gap-3">
@@ -232,7 +226,6 @@
             </div>
         </div>
 
-        <!-- Global Actions / Playlists Download Section -->
         <div id="globalActions" class="hidden mb-6 bg-gradient-to-r from-blue-900/40 via-purple-900/40 to-slate-900/40 rounded-2xl p-6 border border-blue-500/30">
             <div class="flex flex-col items-center justify-center gap-5">
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 border-b border-slate-700/50 pb-4 w-full text-center sm:text-left">
@@ -280,26 +273,13 @@
             </div>
         </div>
 
-        <!-- Filter, Sort and Search (Upgraded) -->
         <div class="flex flex-col lg:flex-row items-center justify-between gap-4 mb-6 bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
             <h2 class="text-2xl font-black text-slate-100 flex items-center gap-3 w-full lg:w-auto">
                 <i class="fa-solid fa-compact-disc text-blue-500"></i> คลังซีรีส์ 
                 <span id="countBadge" class="text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2.5 py-1 rounded-full shadow-inner">0 เรื่อง</span>
             </h2>
             
-            <div class="flex flex-col sm:flex-row w-full lg:w-auto gap-3">
-                <!-- Sort Dropdown -->
-                <div class="relative min-w-[180px]">
-                    <select id="sortSelect" onchange="filterAndRender()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition-colors shadow-inner appearance-none cursor-pointer">
-                        <option value="newest">📌 เรียงจากล่าสุด (ล่างขึ้นบน)</option>
-                        <option value="oldest">🕰️ เรียงจากเก่าสุด (บนลงล่าง)</option>
-                        <option value="episodes">🎬 จำนวนตอนเยอะสุด</option>
-                        <option value="deadlinks">💀 พบลิงก์เสียเยอะสุด</option>
-                    </select>
-                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
-                </div>
-                
-                <!-- Search Box -->
+            <div class="w-full lg:w-auto">
                 <div class="relative w-full sm:w-72">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
                     <input type="text" id="searchInput" oninput="handleSearchDebounced()" placeholder="ค้นหาซีรีส์, พากย์ไทย, ซับไทย..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 transition-colors shadow-inner">
@@ -307,10 +287,8 @@
             </div>
         </div>
 
-        <!-- Grid Results (Paginated) -->
         <div id="output" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[400px] content-start"></div>
         
-        <!-- Pagination Controls -->
         <div id="paginationContainer" class="hidden flex flex-col sm:flex-row items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 mt-8">
             <p class="text-sm text-slate-400 mb-4 sm:mb-0" id="pageInfoText">แสดงรายการ 1 - 24 จากทั้งหมด 0 รายการ</p>
             <div class="flex items-center gap-2">
@@ -324,7 +302,6 @@
             </div>
         </div>
 
-        <!-- Empty Placeholder -->
         <div id="emptyState" class="text-center py-20 bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-800 hidden">
             <i class="fa-solid fa-layer-group text-slate-700 text-6xl mb-4"></i>
             <h3 class="text-lg font-semibold text-slate-400">ยังไม่มีข้อมูลที่จะแสดงผล</h3>
@@ -332,7 +309,6 @@
         </div>
     </div>
 
-    <!-- Built-in Video Stream Player Modal -->
     <div id="playerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 hidden transition-opacity duration-300">
         <div class="bg-slate-900 rounded-2xl border border-slate-800 max-w-4xl w-full overflow-hidden shadow-2xl relative">
             <div class="flex justify-between items-center p-4 border-b border-slate-800">
@@ -365,7 +341,6 @@
 
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
 
-    <!-- Custom Confirm Modal -->
     <div id="confirmModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
         <div class="bg-slate-900 rounded-2xl border border-slate-700 max-w-sm w-full p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="confirmBox">
             <div class="flex items-center gap-3 mb-4">
@@ -383,7 +358,6 @@
     </div>
 
     <script>
-        // --- ฐานข้อมูล IndexedDB ---
         localforage.config({ name: 'SeriesHarvesterPro', storeName: 'series_data' });
 
         let BASE_CAT = 'https://kubhd24.net/category/';
@@ -393,13 +367,11 @@
         let storageFullFlag = false; 
         let activeControllers = new Set();
         
-        // --- ระบบ Pagination State ---
         let currentDisplayList = [];
         let currentPage = 1;
         const ITEMS_PER_PAGE = 24;
-        let searchTimeout = null; // ตัวแปรสำหรับระบบ Debounce ค้นหา
+        let searchTimeout = null; 
 
-        // --- ระบบเสียงและ Toast ---
         let audioCtx = null;
         function getAudioContext() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -420,7 +392,7 @@
                 gain.connect(ctx.destination);
                 osc.start(ctx.currentTime + delay);
                 osc.stop(ctx.currentTime + delay + duration);
-            } catch (e) { console.warn("Audio playback failed"); }
+            } catch (e) {}
         }
 
         function triggerSound(type) {
@@ -506,13 +478,12 @@
             text.textContent = p + '%';
             if(detailText) detail.textContent = detailText;
         }
-        
+
         function validatePages() {
             const startInput = document.getElementById('startPage');
             const endInput = document.getElementById('endPage');
             let startVal = parseInt(startInput.value); let endVal = parseInt(endInput.value);
             
-            // BUGFIX: จัดการกรณีลบช่องว่างจนเป็น NaN ให้บังคับเป็นหน้า 1
             if (isNaN(startVal) || startVal < 1) { startVal = 1; startInput.value = 1; }
             if (isNaN(endVal) || endVal < 1) { endVal = 1; endInput.value = 1; }
         }
@@ -524,7 +495,6 @@
             input.value = val; validatePages();
         }
 
-        // --- ระบบ Storage & Pagination Sync ---
         async function saveToStorage() {
             try {
                 await localforage.setItem('harvesterData', gatheredSeries);
@@ -550,41 +520,25 @@
             }
         }
 
-        // *** ระบบ Debounce ป้องกัน UI ค้างเวลาพิมพ์ค้นหาเร็วๆ ***
         function handleSearchDebounced() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 filterAndRender();
-            }, 300); // รอให้ผู้ใช้หยุดพิมพ์ 300ms ค่อยรันคำสั่งค้นหา
+            }, 300);
         }
 
-        // *** เปลี่ยนแปลง: เพิ่มระบบจัดการแสดงผลหน้า (Pagination & Filter) ***
         function filterAndRender(resetPage = true) {
             if(resetPage) currentPage = 1;
             
             const term = document.getElementById('searchInput').value.toLowerCase();
-            const sortMode = document.getElementById('sortSelect').value;
             
-            // 1. Filter
             currentDisplayList = gatheredSeries.filter(series => {
                 const tagString = series.tags ? series.tags.map(t => t.text).join(' ') : '';
-                const searchKeywords = `${series.title} ${series.cleanTitle} ${tagString}`.toLowerCase();
+                const searchKeywords = `${series.title || ''} ${series.cleanTitle || ''} ${tagString}`.toLowerCase();
                 return searchKeywords.includes(term);
             });
 
-            // 2. Sort
-            if(sortMode === 'newest') {
-                currentDisplayList.reverse(); // ข้อมูลที่เข้ามาล่าสุดจะอยู่ท้าย Array, reverse เพื่อให้ล่าสุดอยู่บน
-            } else if(sortMode === 'episodes') {
-                currentDisplayList.sort((a, b) => b.episodes.length - a.episodes.length);
-            } else if(sortMode === 'deadlinks') {
-                currentDisplayList.sort((a, b) => {
-                    let aDead = a.episodes.filter(ep=>ep.isDead).length;
-                    let bDead = b.episodes.filter(ep=>ep.isDead).length;
-                    return bDead - aDead;
-                });
-            } // 'oldest' ใช้แบบ default array order
-
+            currentDisplayList.reverse();
             renderCurrentPage();
             updateGlobalActionsUI();
         }
@@ -593,7 +547,7 @@
             const output = document.getElementById('output');
             output.innerHTML = '';
             
-            if(currentDisplayList.length === 0) return; // Empty state handled by updateGlobalActionsUI
+            if(currentDisplayList.length === 0) return;
 
             const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
             const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -610,7 +564,6 @@
             if(currentPage > totalPages) currentPage = totalPages;
             renderCurrentPage();
             
-            // เลื่อนจอขึ้นไปด้านบนสุดของผลลัพธ์เพื่อ UX ที่ดี
             document.getElementById('countBadge').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
@@ -635,7 +588,6 @@
             container.classList.remove('hidden');
             const totalPages = Math.ceil(currentDisplayList.length / ITEMS_PER_PAGE);
             
-            // BUGFIX: ล็อคปุ่มหากกำลังสแกนอยู่ (activeHarvest === true) ป้องกัน DOM พัง
             btnPrev.disabled = (currentPage === 1) || activeHarvest;
             btnNext.disabled = (currentPage === totalPages) || activeHarvest;
             
@@ -658,7 +610,7 @@
             
             if (currentDisplayList.length === 0 && gatheredSeries.length > 0) {
                 emptyState.classList.remove('hidden');
-                emptyState.innerHTML = `<i class="fa-solid fa-magnifying-glass text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ไม่พบซีรีส์ที่ค้นหา</h3><p class="text-sm text-slate-600 mt-1">ลองเปลี่ยนคำค้นหา หรือรูปแบบการจัดเรียง</p>`;
+                emptyState.innerHTML = `<i class="fa-solid fa-magnifying-glass text-slate-700 text-6xl mb-4"></i><h3 class="text-lg font-semibold text-slate-400">ไม่พบซีรีส์ที่ค้นหา</h3><p class="text-sm text-slate-600 mt-1">ลองเปลี่ยนคำค้นหา</p>`;
                 document.getElementById('paginationContainer').classList.add('hidden');
             } else if (currentDisplayList.length === 0) {
                 emptyState.classList.remove('hidden');
@@ -669,7 +621,6 @@
             }
         }
 
-        // --- JSON & Export Sync ---
         function exportIPTVJSON() {
             if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้ส่งออก", "error"); return; }
             const exportData = {
@@ -695,13 +646,14 @@
                 groupedByCategory[catName].forEach(series => {
                     const tagString = series.tags && series.tags.length > 0 ? series.tags.map(t => t.text).join(' | ') : "";
                     const infoText = tagString ? `${tagString} | EP 1 - ${series.episodes.length} จบ` : `EP 1 - ${series.episodes.length} จบ`;
-                    const seriesObj = { name: series.title, image: series.poster, info: infoText };
+                    const seriesObj = { name: series.title || 'Unknown', image: series.poster, info: infoText };
 
                     let seasons = {}; let defaultSeasonName = "รายการตอนทั้งหมด";
                     series.episodes.forEach((ep) => {
                         if (!ep.isDead) {
                             let seasonName = defaultSeasonName;
-                            const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
+                            const safeEpTitle = ep.title || '';
+                            const ssMatch = safeEpTitle.match(/(?:SS|Season|ภาค)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
                             if (ssMatch) seasonName = `Season ${ssMatch[1]}`;
                             if (!seasons[seasonName]) seasons[seasonName] = [];
                             seasons[seasonName].push(ep);
@@ -720,11 +672,12 @@
                                 const seasonInfoText = specificTagString ? `${specificTagString} | EP 1 - ${seasonEps.length} จบ` : `EP 1 - ${seasonEps.length} จบ`;
                                 
                                 const stations = seasonEps.map(ep => {
-                                    let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
-                                    if(!cleanEpTitle) cleanEpTitle = ep.title; 
+                                    const safeEpTitle = ep.title || '';
+                                    let cleanEpTitle = safeEpTitle.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
+                                    if(!cleanEpTitle) cleanEpTitle = safeEpTitle; 
                                     return {
-                                        name: cleanEpTitle, image: series.poster, url: ep.url, info: seasonInfoText,
-                                        playInNatPlayer: "true", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+                                        name: cleanEpTitle, image: series.poster, url: ep.url.trim(), info: seasonInfoText,
+                                        playInNatPlayer: true, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
                                     };
                                 });
                                 seriesObj.groups.push({ name: sName, image: series.poster, info: seasonInfoText, stations: stations });
@@ -732,8 +685,8 @@
                         } else {
                             const seasonEps = seasons[seasonKeys[0]];
                             const stations = seasonEps.map(ep => ({
-                                name: ep.title, image: series.poster, url: ep.url, info: infoText,
-                                playInNatPlayer: "true", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+                                name: ep.title || 'EP', image: series.poster, url: ep.url.trim(), info: infoText,
+                                playInNatPlayer: true, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
                             }));
                             seriesObj.stations = stations;
                         }
@@ -800,7 +753,7 @@
                 if (saved && saved.length > 0) {
                     gatheredSeries = saved;
                     appendLog(`[SYSTEM] 💾 กู้คืนข้อมูลเซสชันล่าสุด ${gatheredSeries.length} เรื่องจาก IndexedDB`, 'text-emerald-400');
-                    filterAndRender(); // ใช้ Pagination Render ตอนเปิดแอป
+                    filterAndRender();
                     showToast('โหลดฐานข้อมูลสำเร็จ', 'info');
                 } else {
                     updateGlobalActionsUI();
@@ -830,6 +783,7 @@
         });
 
         function getEpNum(title) {
+            if(!title) return null;
             const m = title.match(/(?:ep|ตอน)[\s\.\-]*(\d+)/i);
             if (m) return parseInt(m[1], 10);
             const m2 = title.match(/\d+/);
@@ -838,7 +792,7 @@
 
         function autoFormatEpisodes(episodes) {
             if (!episodes || episodes.length <= 1) return episodes;
-            const hasExplicitSeason = episodes.some(ep => /(?:SS|Season|ภาค)[\s\.\-]*\d+/i.test(ep.title));
+            const hasExplicitSeason = episodes.some(ep => ep.title && /(?:SS|Season|ภาค)[\s\.\-]*\d+/i.test(ep.title));
             let ascCount = 0; let descCount = 0; let prevNum = -1;
             for (let ep of episodes) {
                 const num = getEpNum(ep.title);
@@ -866,13 +820,14 @@
                         if (lastNum > 1 && num < lastNum && (num === 1 || num === 0)) currentSeason++;
                         lastNum = num;
                     }
-                    ep.title = `SS${currentSeason} ${ep.title}`;
+                    ep.title = `SS${currentSeason} ${ep.title || 'Unknown'}`;
                 }
             }
             return episodes;
         }
 
         function extractSeriesInfo(rawTitle) {
+            if(!rawTitle) return { cleanTitle: 'Unknown Series', tags: [], originalTitle: 'Unknown Series' };
             let clean = rawTitle; let tags = [];
             if (/พากย์ไทย/i.test(clean)) tags.push({ text: 'พากย์ไทย', type: 'dub' });
             if (/ซับไทย|บรรยายไทย/i.test(clean)) tags.push({ text: 'ซับไทย', type: 'sub' });
@@ -928,7 +883,7 @@
                     const url = await getStream(btn.id);
                     if (url) {
                         triggerSound('tick');
-                        return { title: btn.textContent.trim().replace(/[\r\n\s]+/g, " "), url, isDead: false };
+                        return { title: btn.textContent.trim().replace(/[\r\n\s]+/g, " "), url: url.trim(), isDead: false };
                     }
                     return null;
                 });
@@ -942,9 +897,13 @@
         async function getStream(postId) {
             const json = await requestWithRetry(`https://kubhd24.net/wp-admin/admin-ajax.php?action=mix_get_player&post_id=${postId}`, true);
             if (!json || json === "404_NOT_FOUND" || !json.success || !json.player) return null;
-            const match = json.player.match(/data-src="([^"]+)"/);
+            
+            // Safer Regex that matches both src and data-src seamlessly
+            const match = json.player.match(/(?:data-)?src="([^"]+)"/);
             if (!match) return null;
-            return `https://media.vdohls.com/${match[1].split('/').pop()}/playlist.m3u8`;
+            
+            const urlParam = match[1].split('/').pop();
+            return urlParam ? `https://media.vdohls.com/${urlParam}/playlist.m3u8` : null;
         }
 
         async function parseSeries(id, pageNum, categoryText) {
@@ -1052,7 +1011,6 @@
                                     if (data.episodes.length >= existingSeries.episodes.length) {
                                         let isNewEpisodes = data.episodes.length > existingSeries.episodes.length;
                                         
-                                        // BUGFIX: ถ้ามีตอนใหม่ ให้ย้ายเรื่องนี้ไปไว้ท้ายสุดของ Array (เพื่อให้ขึ้นหน้าแรกสุดเวลาเรียงแบบ 'ล่าสุด')
                                         if (isNewEpisodes) {
                                             gatheredSeries.splice(existingIndex, 1);
                                             gatheredSeries.push(data);
@@ -1062,9 +1020,9 @@
                                         
                                         await saveToStorage();
                                         
-                                        // Update UI DOM specifically if it exists in current page view
-                                        const safeId = CSS.escape(data.id);
-                                        const oldCard = document.querySelector(`.card[data-id="${safeId}"]`);
+                                        // DOM Query with deep escaping protection
+                                        const safeQueryId = data.id.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                                        const oldCard = document.querySelector(`.card[data-id="${safeQueryId}"]`);
                                         if(oldCard) {
                                             const tempContainer = document.createElement('div');
                                             renderCard(data, p, tempContainer); 
@@ -1079,8 +1037,7 @@
                                 } else {
                                     gatheredSeries.push(data);
                                     await saveToStorage(); 
-                                    // หากอยู่หน้าแรก ก็อัปเดต Render ให้เห็นทันที
-                                    if(currentPage === 1 && document.getElementById('sortSelect').value === 'newest') filterAndRender(false);
+                                    if(currentPage === 1) filterAndRender(false);
                                     showToast(`ดึง "${data.cleanTitle}" สำเร็จ!`, 'success');
                                 }
                             }
@@ -1100,12 +1057,11 @@
                     appendLog(`✅ สแกนสมบูรณ์ ฐานข้อมูลมี ${gatheredSeries.length} เรื่อง รวม ${totalEps} ตอน`, 'text-emerald-400 font-bold');
                     triggerSound('done');
                 }
-                filterAndRender(); // Re-render for safety
+                filterAndRender();
                 setScanningState(false);
             }
         }
 
-        // *** เปลี่ยนแปลง: เพิ่มฟังก์ชัน Smart Sync สำหรับอัปเดตข้อมูลที่มีอยู่เดิม ***
         async function smartSync() {
             if (activeHarvest) return;
             if (gatheredSeries.length === 0) { showToast('ไม่พบข้อมูลในคลัง กรุณาสแกนครั้งแรกก่อน', 'error'); return; }
@@ -1121,7 +1077,6 @@
             appendLog(`[SYSTEM] 🔄 เริ่มกระบวนการ Smart Sync ค้นหาตอนใหม่...`, 'text-emerald-400 font-bold');
 
             try {
-                // เพื่อความปลอดภัยของข้อมูล เราจะสร้าง Array ชุดเดิมมา Loop เพื่อให้ไม่กระทบ Index หากมีการเรียงข้อมูล
                 const seriesToSync = [...gatheredSeries];
 
                 for (let i = 0; i < seriesToSync.length; i++) {
@@ -1133,7 +1088,7 @@
                     updateProgress((i / seriesToSync.length) * 100, `เช็กตอนใหม่: ${currentSeries.id}`);
                     appendLog(`[เช็กอัปเดต]: ${currentSeries.title}`, 'text-slate-400');
 
-                    await sleep(Math.floor(Math.random() * 500) + 500); // หน่วงเวลาเบาๆ
+                    await sleep(Math.floor(Math.random() * 500) + 500); 
 
                     const data = await parseSeries(currentSeries.id, currentSeries.pageNum || 1, currentSeries.categoryText || 'N/A');
                     
@@ -1143,16 +1098,14 @@
                         const existingIndex = gatheredSeries.findIndex(s => s.id === currentSeries.id);
                         if(existingIndex !== -1) {
                             
-                            // BUGFIX: ย้ายเรื่องที่ Sync แล้วเจอตอนใหม่ ไปไว้ด้านบนสุดของการแสดงผล
                             gatheredSeries.splice(existingIndex, 1);
                             gatheredSeries.push(data);
                             
                             updatedCount++;
                             await saveToStorage();
                             
-                            // อัปเดต UI ถ้ามีการ์ดนั้นแสดงผลอยู่
-                            const safeId = CSS.escape(data.id);
-                            const oldCard = document.querySelector(`.card[data-id="${safeId}"]`);
+                            const safeQueryId = data.id.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                            const oldCard = document.querySelector(`.card[data-id="${safeQueryId}"]`);
                             if(oldCard) {
                                 const tempContainer = document.createElement('div');
                                 renderCard(data, data.pageNum || 1, tempContainer); 
@@ -1164,7 +1117,6 @@
                             triggerSound('success');
                         }
                     } else if (data && data.episodes.length === currentSeries.episodes.length) {
-                        // จำนวนตอนเท่าเดิม แต่ให้รีเฟรช URL เฉพาะกิจเพื่อลิงก์สดใหม่
                         const existingIndex = gatheredSeries.findIndex(s => s.id === currentSeries.id);
                         if(existingIndex !== -1) gatheredSeries[existingIndex] = data;
                     }
@@ -1173,7 +1125,7 @@
                 appendLog(`❌ Sync Error: ${err.message}`, 'text-rose-500 font-bold');
             } finally {
                 activeHarvest = false;
-                await saveToStorage(); // Save final state
+                await saveToStorage(); 
                 
                 if (isStopped) {
                     updateProgress(0, 'ยกเลิกกระบวนการซิงค์');
@@ -1184,7 +1136,7 @@
                     appendLog(`✅ สแกนตรวจสอบเสร็จสิ้น พบตอนใหม่จำนวน ${updatedCount} เรื่อง`, 'text-emerald-400 font-bold');
                     triggerSound('done');
                 }
-                filterAndRender(false); // Re-render maintaining page if possible
+                filterAndRender(false);
                 setScanningState(false);
             }
         }
@@ -1254,15 +1206,15 @@
         function renderCard(data, pageNum, targetContainer = null) {
             let m3u = "\uFEFF#EXTM3U\n";
             const groupName = data.categoryText || "ซีรีส์ทั่วไป";
-            const safeTitle = data.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
+            const safeTitle = (data.title || 'Unknown').replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
             const safeGroupName = groupName.replace(/["']/g, '');
-            const safePoster = data.poster.replace(/["']/g, '');
+            const safePoster = (data.poster || '').replace(/["']/g, '');
 
             let activeEpsCount = 0;
             data.episodes.forEach(ep => {
                 if (!ep.isDead) {
-                    const safeEpTitle = ep.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
-                    m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
+                    const safeEpTitle = (ep.title || 'EP').replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
+                    m3u += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url.trim()}\n`;
                     activeEpsCount++;
                 }
             });
@@ -1270,11 +1222,14 @@
 
             const card = document.createElement("div");
             card.className = "card bg-slate-800 rounded-2xl overflow-hidden border border-slate-700/60 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/50 flex flex-col group relative";
+            const safeIdAttr = data.id.replace(/["\\]/g, ''); // Safest for HTML ID
+            const safeQueryId = data.id.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
             card.setAttribute('data-id', data.id); 
             
             let groups = {}; let currentGroupName = "รายการตอนทั้งหมด";
             data.episodes.forEach(ep => {
-                const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
+                const epTitleSafe = ep.title || '';
+                const ssMatch = epTitleSafe.match(/(?:SS|Season|ภาค)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
                 if (ssMatch) currentGroupName = `Season ${ssMatch[1]}`;
                 if (!groups[currentGroupName]) groups[currentGroupName] = [];
                 groups[currentGroupName].push(ep);
@@ -1285,8 +1240,9 @@
                 groupNames.forEach(gName => {
                     optionsHtml += `<optgroup label="📺 ${escapeHTML(gName)}">`;
                     groups[gName].forEach(ep => {
-                        let cleanEpTitle = ep.title.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
-                        if(!cleanEpTitle) cleanEpTitle = ep.title; 
+                        const safeEpTitleForOpt = ep.title || 'EP';
+                        let cleanEpTitle = safeEpTitleForOpt.replace(/(?:SS|Season|ภาค)[\s\.\-]*\d+(?:[\s\-\&]*\d+)?[\s\-\:]*/i, '').trim();
+                        if(!cleanEpTitle) cleanEpTitle = safeEpTitleForOpt; 
                         const deadMark = ep.isDead ? ' 💀 [เสีย]' : '';
                         optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(cleanEpTitle)}${deadMark}</option>`;
                     });
@@ -1295,7 +1251,7 @@
             } else {
                 data.episodes.forEach(ep => {
                     const deadMark = ep.isDead ? ' 💀 [เสีย]' : '';
-                    optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(ep.title)}${deadMark}</option>`;
+                    optionsHtml += `<option value="${escapeHTML(ep.url)}">${escapeHTML(ep.title || 'EP')}${deadMark}</option>`;
                 });
             }
 
@@ -1316,8 +1272,9 @@
                 deadBadge = `<span class="absolute top-3 right-3 bg-rose-600/90 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md backdrop-blur-sm animate-pulse z-10 border border-rose-400/50" title="ลิงก์เสีย ${deadCount} ตอน"><i class="fa-solid fa-skull"></i> ${deadCount}</span>`;
             }
 
-            const displayTitle = data.cleanTitle ? data.cleanTitle : data.title;
+            const displayTitle = data.cleanTitle ? data.cleanTitle : (data.title || 'Unknown');
             const escapedSafeTitle = escapeHTML(displayTitle);
+            const safePreviewJsId = data.id.replace(/['"\\]/g, '\\$&');
 
             card.innerHTML = `
                 ${deadBadge}
@@ -1333,10 +1290,10 @@
                         <div class="mt-2">
                             <label class="block text-[10px] text-slate-400 mb-1 font-semibold uppercase">เลือกดูตอนย่อย:</label>
                             <div class="flex gap-1.5">
-                                <select id="epSelect-${data.id}" class="flex-grow bg-slate-900 border border-slate-700 rounded-lg text-xs px-2.5 py-1.5 focus:outline-none focus:border-blue-500 text-slate-300">
+                                <select id="epSelect-${safeIdAttr}" class="flex-grow bg-slate-900 border border-slate-700 rounded-lg text-xs px-2.5 py-1.5 focus:outline-none focus:border-blue-500 text-slate-300 w-[calc(100%-2.5rem)] truncate">
                                     ${optionsHtml}
                                 </select>
-                                <button onclick="previewEpisode('${data.id}')" class="bg-blue-600 hover:bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-md" title="ทดสอบรับชมสตรีมสด">
+                                <button onclick="previewEpisode('${safePreviewJsId}')" class="shrink-0 bg-blue-600 hover:bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-md" title="ทดสอบรับชมสตรีมสด">
                                     <i class="fa-solid fa-play text-xs"></i>
                                 </button>
                             </div>
@@ -1376,11 +1333,11 @@
             let megaM3U = "\uFEFF#EXTM3U\n";
             gatheredSeries.forEach(series => {
                 const groupName = series.categoryText || "ซีรีส์ทั่วไป";
-                const safeTitle = series.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
-                const safeGroupName = groupName.replace(/["']/g, ''); const safePoster = series.poster.replace(/["']/g, '');
+                const safeTitle = (series.title || 'Unknown').replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
+                const safeGroupName = groupName.replace(/["']/g, ''); const safePoster = (series.poster || '').replace(/["']/g, '');
                 series.episodes.forEach(ep => {
-                    const safeEpTitle = ep.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
-                    if (!ep.isDead) megaM3U += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url}\n`;
+                    const safeEpTitle = (ep.title || 'EP').replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
+                    if (!ep.isDead) megaM3U += `#EXTINF:-1 tvg-logo="${safePoster}" group-title="${safeGroupName}" tvg-name="${safeTitle}", ${safeTitle} - ${safeEpTitle}\n${ep.url.trim()}\n`;
                 });
             });
             return megaM3U;
@@ -1404,7 +1361,8 @@
 
         let activeHls = null;
         function previewEpisode(id) {
-            const select = document.getElementById(`epSelect-${id}`); if(!select) return;
+            const safeIdAttr = id.replace(/["\\]/g, '');
+            const select = document.getElementById(`epSelect-${safeIdAttr}`); if(!select) return;
             const url = select.value; const titleText = select.options[select.selectedIndex].text;
             const seriesObj = gatheredSeries.find(s => s.id === id);
             const displayTitle = seriesObj ? (seriesObj.cleanTitle || seriesObj.title) : 'ทดลองเล่นวิดีโอ';
