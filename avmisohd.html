@@ -650,6 +650,30 @@
         
         function getSafeUrl(url) { try { return encodeURI(decodeURI(url)); } catch(e) { return encodeURI(url); } }
 
+        // --- NEW: Verify M3U8 Real-time before accepting it ---
+        async function verifyStreamUrl(url) {
+            if (!url || !url.startsWith('http')) return false;
+            try {
+                const proxyInput = document.getElementById('proxyInput').value.trim();
+                const fetchUrl = proxyInput ? (proxyInput + encodeURIComponent(url)) : url;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 4500); // 4.5s max to check
+                
+                const res = await fetch(fetchUrl, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                
+                const isOk = res.ok || res.status === 206 || res.status === 200;
+                controller.abort(); // Cancel body download immediately to save bandwidth!
+                clearTimeout(timeoutId);
+                
+                return isOk;
+            } catch (e) {
+                return false; 
+            }
+        }
+
         async function requestWithRetry(url, retries = 3, isSubRequest = false) {
             const proxyInput = document.getElementById('proxyInput').value.trim();
             const targetUrl = getSafeUrl(url);
@@ -811,6 +835,8 @@
                             candidates.forEach(id => {
                                 urls.push(`https://media.vdohls.com/${id}/video.m3u8`);
                                 urls.push(`https://cdn3.vdohls.com/${id}/video.m3u8`);
+                                urls.push(`https://cdn4.vdohls.com/${id}/video.m3u8`);
+                                urls.push(`https://media.javzero.xyz/${id}/video.m3u8`);
                             });
                         }
                     }
@@ -883,11 +909,28 @@
             if (m3u8s.length === 0 && embedId && embedId.length >= 10 && (html.includes('javzero') || html.includes('vdohls'))) {
                 m3u8s.push(`https://media.vdohls.com/${embedId}/video.m3u8`);
                 m3u8s.push(`https://cdn3.vdohls.com/${embedId}/video.m3u8`);
-                appendLog(`[INFO] 🔓 เจาะทะลุด้วย Heuristic Engine (Force Build ID)`, 'text-fuchsia-400 font-semibold text-[10px]');
+                m3u8s.push(`https://cdn4.vdohls.com/${embedId}/video.m3u8`);
+                m3u8s.push(`https://media.javzero.xyz/${embedId}/video.m3u8`);
             }
 
             if (m3u8s.length > 0) {
-                return { urls: m3u8s, type: 'video' };
+                // --- BUG FIX: VERIFY BEFORE ADDING ---
+                let validUrls = [];
+                const verifyPromises = m3u8s.map(async (u) => {
+                    if (await verifyStreamUrl(u)) {
+                        validUrls.push(u);
+                    }
+                });
+                await Promise.all(verifyPromises);
+
+                if (validUrls.length > 0) {
+                    if (validUrls.some(u => !extracted.includes(u))) {
+                        appendLog(`[INFO] 🔓 เจาะทะลุด้วย Heuristic Engine (เจอลิงก์จริง!)`, 'text-fuchsia-400 font-semibold text-[10px]');
+                    }
+                    return { urls: [...new Set(validUrls)], type: 'video' };
+                } else {
+                    appendLog(`[INFO] ⚠️ M3U8 ที่เดาไว้ตายทั้งหมด กำลังค้นหา Iframe แทน...`, 'text-amber-500 text-[10px]');
+                }
             }
 
             let iframes = [];
