@@ -166,7 +166,8 @@
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">เริ่มจากหน้า</label>
                         <div class="flex items-center">
                             <button type="button" onclick="adjustPage('startPage', -1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-l-lg border-y border-l border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-minus text-xs"></i></button>
-                            <input type="number" id="startPage" value="1" min="1" onchange="validatePages()" oninput="validatePages()" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
+                            <!-- FIX 1: Removed oninput="validatePages()" to prevent input jumping while typing -->
+                            <input type="number" id="startPage" value="1" min="1" onchange="validatePages()" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
                             <button type="button" onclick="adjustPage('startPage', 1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-r-lg border-y border-r border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-plus text-xs"></i></button>
                         </div>
                     </div>
@@ -176,7 +177,8 @@
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">ถึงหน้า</label>
                         <div class="flex items-center">
                             <button type="button" onclick="adjustPage('endPage', -1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-l-lg border-y border-l border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-minus text-xs"></i></button>
-                            <input type="number" id="endPage" value="1" min="1" onchange="validatePages()" oninput="validatePages()" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
+                            <!-- FIX 1: Removed oninput="validatePages()" -->
+                            <input type="number" id="endPage" value="1" min="1" onchange="validatePages()" class="w-full bg-slate-900 border-y border-slate-700 text-center h-9 text-slate-100 font-bold focus:outline-none text-sm">
                             <button type="button" onclick="adjustPage('endPage', 1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-10 h-9 rounded-r-lg border-y border-r border-slate-700 flex items-center justify-center transition-colors"><i class="fa-solid fa-plus text-xs"></i></button>
                         </div>
                     </div>
@@ -369,7 +371,7 @@
         let isStopped = false;
         let gatheredSeries = []; 
         let storageFullFlag = false; 
-        let activeControllers = new Set(); // เปลี่ยนมาใช้ Set เพื่อรองรับ Concurrency แยกอิสระ
+        let activeControllers = new Set();
         
         // --- ระบบเสียงและ Toast ---
         let audioCtx = null;
@@ -424,7 +426,7 @@
             });
         }
 
-        // --- ระบบ Custom Confirm Modal (แทนที่ confirm ของ Browser) ---
+        // --- ระบบ Custom Confirm Modal ---
         function showConfirm(message) {
             return new Promise((resolve) => {
                 const modal = document.getElementById('confirmModal');
@@ -479,7 +481,6 @@
             const text = document.getElementById('progressText');
             const detail = document.getElementById('progressDetail');
             
-            // ป้องกันบั๊ก NaN หลอดโหลดพัง
             let validPercent = percent;
             if (isNaN(validPercent) || !isFinite(validPercent)) validPercent = 0;
             
@@ -489,7 +490,7 @@
             if(detailText) detail.textContent = detailText;
         }
         
-        // BUGFIX: จัดการเรื่องความถูกต้องของการกรอกหน้า เริ่ม-ถึง
+        // FIX 1: ปรับปรุงการตรวจสอบเลขหน้า ไม่ให้ UI กระโดดเวลาลบตัวเลขเพื่อจะพิมพ์ใหม่
         function validatePages() {
             const startInput = document.getElementById('startPage');
             const endInput = document.getElementById('endPage');
@@ -497,12 +498,12 @@
             let startVal = parseInt(startInput.value);
             let endVal = parseInt(endInput.value);
             
-            if (isNaN(startVal) || startVal < 1) { startVal = 1; startInput.value = 1; }
-            if (isNaN(endVal) || endVal < 1) { endVal = 1; endInput.value = 1; }
-            
-            // ถ้าหน้าเริ่มต้นมากกว่าหน้าสิ้นสุด ให้ปรับหน้าสิ้นสุดตามไปอัตโนมัติ
-            if (startVal > endVal) {
-                endInput.value = startVal;
+            // ปล่อยให้ช่องว่าง (NaN) เป็นไปตามที่พิมพ์ แต่จะแก้ไขเมื่อฟอร์มเสียโฟกัส หรือตอนกดปุ่มสแกน
+            if (!isNaN(startVal) && !isNaN(endVal)) {
+                 if (startVal < 1) startInput.value = 1;
+                 if (endVal < 1) endInput.value = 1;
+                 
+                 // ย้ายการเช็ค start > end ไปไว้ใน startHarvesting() เพื่อให้ผู้ใช้กรอกข้อมูลได้อิสระขึ้น
             }
         }
 
@@ -513,7 +514,7 @@
             val += delta;
             if (val < 1) val = 1;
             input.value = val;
-            validatePages(); // ตรวจสอบความถูกต้องซ้ำ
+            validatePages();
         }
 
         // --- ระบบ Storage & JSON Sync ---
@@ -580,7 +581,6 @@
                     const tagString = series.tags && series.tags.length > 0 
                                       ? series.tags.map(t => t.text).join(' | ') 
                                       : "";
-                    // infoText แบบรวมทั้งหมด (แสดงเฉพาะด้านนอกสุด)
                     const infoText = tagString ? `${tagString} | EP 1 - ${series.episodes.length} จบ` : `EP 1 - ${series.episodes.length} จบ`;
                     
                     const seriesObj = {
@@ -592,11 +592,9 @@
                     let seasons = {};
                     let defaultSeasonName = "รายการตอนทั้งหมด";
 
-                    // 1. จัดกลุ่มตอนเข้าด้วยกันตามซีซัน
                     series.episodes.forEach((ep) => {
                         if (!ep.isDead) {
                             let seasonName = defaultSeasonName;
-                            // ค้นหาว่าเป็น Season ไหน
                             const ssMatch = ep.title.match(/(?:SS|Season|ภาค)[\s\.\-]*(\d+(?:[\s\-\&]*\d+)?)/i);
                             if (ssMatch) seasonName = `Season ${ssMatch[1]}`;
 
@@ -605,23 +603,19 @@
                         }
                     });
 
-                    // 2. จัดรูปแบบ JSON โดยคำนวณและแยก info ให้ตรงตามจำนวนตอนของแต่ละซีซัน
                     const seasonKeys = Object.keys(seasons);
                     if (seasonKeys.length > 0) {
                         if (seasonKeys.length > 1 || (seasonKeys.length === 1 && seasonKeys[0] !== defaultSeasonName)) {
-                            // มีการแยกซีซัน ให้สร้าง groups ย่อยเข้าไปอีกชั้น
                             seriesObj.groups = [];
                             seasonKeys.forEach(sName => {
                                 const seasonEps = seasons[sName];
                                 
-                                // กรองเอา Tag season แบบรวม (เช่น Season 1-2) ออกไป และใส่ชื่อ Season เฉพาะเจาะจงแทน
                                 let currentSeasonTags = series.tags ? series.tags.filter(t => t.type !== 'season').map(t => t.text) : [];
                                 if (sName !== defaultSeasonName) {
                                     currentSeasonTags.unshift(sName);
                                 }
                                 const specificTagString = currentSeasonTags.join(' | ');
 
-                                // สร้าง infoText เฉพาะของซีซันนั้นๆ (นับแค่ตอนในซีซัน)
                                 const seasonInfoText = specificTagString ? `${specificTagString} | EP 1 - ${seasonEps.length} จบ` : `EP 1 - ${seasonEps.length} จบ`;
                                 
                                 const stations = seasonEps.map(ep => {
@@ -631,7 +625,7 @@
                                         name: cleanEpTitle,
                                         image: series.poster,
                                         url: ep.url,
-                                        info: seasonInfoText, // ใช้ info เฉพาะของซีซันนั้นๆ
+                                        info: seasonInfoText,
                                         playInNatPlayer: "true",
                                         userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
                                     };
@@ -640,18 +634,17 @@
                                 seriesObj.groups.push({
                                     name: sName,
                                     image: series.poster,
-                                    info: seasonInfoText, // แสดงจำนวนตอนของซีซันที่แยกออกมาชัดเจน
+                                    info: seasonInfoText,
                                     stations: stations
                                 });
                             });
                         } else {
-                            // ถ้ามีแค่ซีซันเดียว (ไม่ระบุ SS) ให้ใส่ใน stations เลย
                             const seasonEps = seasons[seasonKeys[0]];
                             const stations = seasonEps.map(ep => ({
                                 name: ep.title,
                                 image: series.poster,
                                 url: ep.url,
-                                info: infoText, // ใช้ info แบบรวม
+                                info: infoText,
                                 playInNatPlayer: "true",
                                 userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
                             }));
@@ -680,10 +673,9 @@
         function backupDatabase() {
             if (gatheredSeries.length === 0) { showToast("ไม่มีข้อมูลให้สำรอง", "error"); return; }
             
-            // Map ข้อมูลให้มี key "image" เพิ่มเข้าไปด้วยเพื่อความชัวร์เวลาโหลดใช้งานที่อื่น
             const backupData = gatheredSeries.map(series => ({
                 ...series,
-                image: series.poster // เก็บรูปภาพเป็นตัวแปร image เสริม
+                image: series.poster 
             }));
 
             const dataStr = JSON.stringify(backupData, null, 2);
@@ -705,13 +697,11 @@
             reader.onload = async function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    // ตรวจสอบว่าเป็นไฟล์ Backup ดิบ ไม่ใช่ไฟล์ IPTV
                     if (Array.isArray(data)) {
                         let newAdded = 0, updated = 0;
                         data.forEach(importedItem => {
                             if (!importedItem || !importedItem.id || !Array.isArray(importedItem.episodes)) return;
                             
-                            // จัดการกรณีมีการส่งออก image จากระบบเก่า
                             if (importedItem.image && !importedItem.poster) {
                                 importedItem.poster = importedItem.image;
                             }
@@ -748,7 +738,6 @@
             } catch (e) { console.warn('Failed to parse localForage data'); }
         });
 
-        // --- รองรับการกด ESC เพื่อปิดหน้าต่าง (UX Polish) ---
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const playerModal = document.getElementById('playerModal');
@@ -761,7 +750,6 @@
             }
         });
 
-        // --- ระบบ Checkbox เลือกหมวดหมู่ UI Sync ---
         document.querySelectorAll('.cat-checkbox').forEach(cb => {
             cb.addEventListener('change', function() {
                 const icon = this.nextElementSibling.querySelector('.fa-check');
@@ -771,7 +759,6 @@
             if (cb.checked) cb.nextElementSibling.querySelector('.fa-check').classList.remove('opacity-0');
         });
 
-        // --- ระบบสกัดข้อมูลและประมวลผล ---
         function getEpNum(title) {
             const m = title.match(/(?:ep|ตอน)[\s\.\-]*(\d+)/i);
             if (m) return parseInt(m[1], 10);
@@ -792,9 +779,9 @@
                 }
             }
             
-            // BUGFIX: ถ้าระบบเรียงตอนย้อนหลัง (Descending) เช่น 24 ไป 1 ให้สลับเพื่อให้เวลาเล่น M3U รันเรียงตอนได้ถูกต้อง
+            // FIX 2: ป้องกันการ Mutate Array ต้นฉบับ ด้วยการสร้าง Array ใหม่ก่อน reverse
             if (descCount > ascCount) {
-                episodes.reverse();
+                episodes = [...episodes].reverse();
             }
 
             if (hasExplicitSeason) return episodes;
@@ -866,6 +853,10 @@
                     const errMsg = isTimeout ? 'Server Timeout' : e.message;
                     if (i === retries - 1) {
                         appendLog(`❌ ล้มเหลว (รอบ ${retries}): ${errMsg}`, 'text-rose-500');
+                        // FIX 3: แจ้งเตือนผู้ใช้หากไม่ได้ตั้งค่า Proxy ในกรณีรัน Local
+                        if(errMsg.includes('Failed to fetch') && !proxyInput) {
+                            appendLog(`⚠️ สาเหตุอาจเกิดจาก CORS กรุณาตั้งค่า Proxy`, 'text-amber-500');
+                        }
                         return null;
                     }
                     appendLog(`⚠️ ขัดข้อง (${errMsg}) ลองใหม่รอบ ${i+2}/${retries}...`, 'text-amber-500');
@@ -886,7 +877,7 @@
                 appendLog(`⏳ ดึงลิงก์แบบขนานตอนที่ ${i+1} ถึง ${Math.min(i+limit, buttons.length)}...`, 'text-indigo-400');
                 
                 const promises = chunk.map(async (btn) => {
-                    await sleep(Math.random() * 500); // สุ่มหน่วงเวลาหลอกระบบ (Anti-ban)
+                    await sleep(Math.random() * 500);
                     const url = await getStream(btn.id);
                     if (url) {
                         triggerSound('tick');
@@ -935,7 +926,21 @@
 
         async function startHarvesting() {
             if (activeHarvest) return;
-            validatePages(); // รันตรวจสอบเผื่อผู้ใช้งานพิมพ์เลขทิ้งไว้
+            
+            // Logic Check หน้าที่นี่แทนที่จะเช็กทุกครั้งที่พิมพ์ เพื่อไม่ให้ขัดจังหวะผู้ใช้
+            const startInput = document.getElementById("startPage");
+            const endInput = document.getElementById("endPage");
+            let startPage = parseInt(startInput.value);
+            let endPage = parseInt(endInput.value);
+            
+            if (isNaN(startPage) || startPage < 1) { startPage = 1; startInput.value = 1; }
+            if (isNaN(endPage) || endPage < 1) { endPage = 1; endInput.value = 1; }
+            
+            if (startPage > endPage) {
+                endPage = startPage;
+                endInput.value = startPage;
+            }
+
             getAudioContext(); 
 
             const checkboxes = document.querySelectorAll('#categoryCheckboxes input[type="checkbox"]:checked');
@@ -945,13 +950,6 @@
             }
             const categories = Array.from(checkboxes).map(cb => ({ value: cb.value, text: cb.getAttribute('data-text') }));
             
-            const startPage = parseInt(document.getElementById("startPage").value);
-            const endPage = parseInt(document.getElementById("endPage").value);
-            
-            if (isNaN(startPage) || isNaN(endPage) || startPage < 1 || endPage < 1 || startPage > endPage) {
-                showToast('ข้อผิดพลาด: การตั้งค่าช่วงหน้าไม่ถูกต้อง!', 'error'); return;
-            }
-
             activeHarvest = true;
             isStopped = false;
 
@@ -993,11 +991,10 @@
                         
                         const catHtml = await requestWithRetry(pageUrl);
                         
-                        // ระบบ Bypass 404
                         if (catHtml === "404_NOT_FOUND") {
                             updateProgress((globalPageCounter / totalPagesToScan) * 100, `ไม่พบหน้า ${p}`);
                             appendLog(`⚠️ ไม่พบหน้าเว็บ (404) - ข้ามหมวดหมู่นี้`, 'text-amber-500');
-                            globalPageCounter += (endPage - p); // Skip remaining counter for this cat
+                            globalPageCounter += (endPage - p); 
                             break; 
                         }
 
@@ -1046,12 +1043,12 @@
                                         const safeId = CSS.escape(data.id);
                                         const oldCard = document.querySelector(`.card[data-id="${safeId}"]`);
                                         
-                                        // DOM FIX: สร้างและแทนที่ให้ชัวร์ขึ้น ป้องกัน DOM แตก
                                         const tempContainer = document.createElement('div');
                                         renderCard(data, p, tempContainer); 
                                         
-                                        if(oldCard && tempContainer.firstChild) {
-                                            oldCard.replaceWith(tempContainer.firstChild);
+                                        // FIX 4: ใช้ firstElementChild ป้องกันการดึง Whitespace Text Node มาทำงาน
+                                        if(oldCard && tempContainer.firstElementChild) {
+                                            oldCard.replaceWith(tempContainer.firstElementChild);
                                         } else {
                                             renderCard(data, p);
                                         }
@@ -1100,7 +1097,6 @@
             }
         }
 
-        // --- ระบบ Check Dead Links ---
         async function verifyLinks() {
             if (gatheredSeries.length === 0) return;
             getAudioContext(); 
@@ -1120,7 +1116,6 @@
             
             activeHarvest = true; isStopped = false;
             
-            // ล็อคปุ่มทุกอย่างป้องกันการกวนระบบ
             document.getElementById('btnStart').disabled = true;
             document.getElementById('btnStop').disabled = false;
             document.getElementById('speedSelect').disabled = true;
@@ -1139,7 +1134,7 @@
                 const chunk = allEps.slice(i, i + limit);
                 
                 await Promise.all(chunk.map(async (item) => {
-                    if (isStopped) return; // เช็กก่อนเริ่ม fetch ย่อย
+                    if (isStopped) return; 
                     
                     const controller = new AbortController();
                     activeControllers.add(controller);
@@ -1161,7 +1156,7 @@
                             item.ep.isDead = true; deadCount++;
                         }
                     } finally {
-                        clearTimeout(timeoutId); // เคลียร์เมมโมรี่ Timer ทุกกรณี
+                        clearTimeout(timeoutId); 
                         activeControllers.delete(controller);
                     }
                     checked++;
@@ -1216,7 +1211,6 @@
             
             countBadge.textContent = `${gatheredSeries.length} เรื่อง`;
             
-            // ใช้ตัวแปรตรวจเช็คการ Filter เพื่อให้ UI EmptyState ลิ้งค์ตรงตามผลลัพธ์ที่ซ่อนอยู่จริง
             const term = document.getElementById('searchInput').value.toLowerCase();
             let visibleCount = 0;
             if (term) {
@@ -1245,7 +1239,6 @@
         function renderCard(data, pageNum, targetContainer = null) {
             let m3u = "\uFEFF#EXTM3U\n";
             const groupName = data.categoryText || "ซีรีส์ทั่วไป";
-            // ป้องกัน M3U เสียหายจากการเว้นบรรทัดและเครื่องหมายที่ผิด
             const safeTitle = data.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
             const safeGroupName = groupName.replace(/["']/g, '');
             const safePoster = data.poster.replace(/["']/g, '');
@@ -1364,7 +1357,6 @@
             if(targetContainer) targetContainer.appendChild(card);
             else document.getElementById("output").appendChild(card);
             
-            // Re-check empty state just in case
             updateGlobalActions();
         }
 
@@ -1397,7 +1389,6 @@
             let megaM3U = "\uFEFF#EXTM3U\n";
             gatheredSeries.forEach(series => {
                 const groupName = series.categoryText || "ซีรีส์ทั่วไป";
-                // ใช้ Regular Expression ลบเครื่องหมาย " ' และ , ป้องกันไฟล์พัง
                 const safeTitle = series.title.replace(/["',]/g, '').replace(/[\r\n]+/g, ' ').trim();
                 const safeGroupName = groupName.replace(/["']/g, '');
                 const safePoster = series.poster.replace(/["']/g, '');
@@ -1448,7 +1439,6 @@
             const placeholder = document.getElementById('videoPlaceholder');
             video.classList.add('hidden'); placeholder.classList.remove('hidden');
 
-            // HLS BUGFIX: เสริมการล้างเมมโมรีก่อนสร้างอินสแตนซ์ใหม่
             if (activeHls) {
                 activeHls.destroy();
                 activeHls = null;
